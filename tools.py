@@ -438,6 +438,8 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
         "rgba(16, 185, 129, 1)"
     ]
 
+    korea_keywords = ["korea, rep.", "korea", "대한민국", "한국", "남한"]
+
     for idx, ent in enumerate(entities):
         resolved_name = resolve_entity_name(df, ent, entity_col)
         row = df[df[entity_col] == resolved_name]
@@ -452,19 +454,35 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
             round(float(val), 2) if pd.notna(val) else None
             for val in row[year_cols].values[0]
         ]
-        color = palette[idx % len(palette)]
+
+        is_korea = any(k in str(real_name).lower() for k in korea_keywords) or any(k in str(ent).lower() for k in korea_keywords)
 
         display_label = real_name
-        if real_name == "Korea, Rep.":
-            display_label = "Korea, Rep. (대한민국)"
+        if is_korea and "대한민국" not in real_name:
+            display_label = f"{real_name} (대한민국)"
+
+        # 대한민국은 강조 빨간색(두꺼운 선), 다른 모든 나라는 통일된 단일 슬레이트 그레이(기본 선)
+        if is_korea:
+            color = "rgba(239, 68, 68, 1)"  # 대한민국: 눈에 띄는 빨강
+            bg_color = "rgba(239, 68, 68, 0.15)"
+            line_width = 3.5
+            point_r = 4.5
+        else:
+            color = "rgba(148, 163, 184, 0.85)"  # 다른 모든 나라: 통일된 단일 회색
+            bg_color = "rgba(148, 163, 184, 0.05)"
+            line_width = 1.8
+            point_r = 2.5
 
         datasets.append({
             "label": display_label,
             "data": values,
             "borderColor": color,
-            "backgroundColor": color.replace("1)", "0.1)"),
+            "backgroundColor": bg_color,
+            "borderWidth": line_width,
+            "pointRadius": point_r,
+            "pointHoverRadius": point_r + 2,
             "fill": False,
-            "tension": 0.1
+            "tension": 0.15
         })
 
     return {
@@ -515,7 +533,19 @@ def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True
     values = [round(float(v), 2) for v in sorted_df[target_col].tolist()]
     rank_list = [{"rank": i + 1, "name": labels[i], "value": values[i]} for i in range(len(labels))]
 
-    color = "rgba(75, 192, 192, 0.7)" if mode.lower() == "top" else "rgba(255, 99, 132, 0.7)"
+    # 대한민국 여부에 따른 차별화 배색: 대한민국은 빨간색, 다른 모든 나라는 통일된 블루
+    korea_keywords = ["korea, rep.", "korea", "대한민국", "한국", "남한"]
+    bg_colors = []
+    border_colors = []
+    for lbl in labels:
+        if any(k in str(lbl).lower() for k in korea_keywords):
+            bg_colors.append("rgba(239, 68, 68, 0.85)")
+            border_colors.append("rgba(239, 68, 68, 1)")
+        else:
+            default_bg = "rgba(59, 130, 246, 0.65)" if mode.lower() == "top" else "rgba(148, 163, 184, 0.65)"
+            default_border = "rgba(59, 130, 246, 0.95)" if mode.lower() == "top" else "rgba(148, 163, 184, 0.95)"
+            bg_colors.append(default_bg)
+            border_colors.append(default_border)
 
     return {
         "tool_name": "top_bottom_n",
@@ -530,7 +560,13 @@ def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True
         "chart_data": {
             "type": "bar",
             "labels": labels,
-            "datasets": [{"label": f"{target_col}년 인터넷 이용률 (%)", "data": values, "backgroundColor": color}]
+            "datasets": [{
+                "label": f"{target_col}년 인터넷 이용률 (%)",
+                "data": values,
+                "backgroundColor": bg_colors,
+                "borderColor": border_colors,
+                "borderWidth": 1.2
+            }]
         }
     }
 

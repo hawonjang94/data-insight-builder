@@ -798,31 +798,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const ctx = canvasEl.getContext("2d");
         const chartType = (chartData.type || "bar").toLowerCase();
+        const koreaRegex = /korea|대한민국|한국|남한/i;
 
-        // 색상 팔레트
-        const bgColors = [
-            "rgba(37, 99, 235, 0.75)",
-            "rgba(16, 185, 129, 0.75)",
-            "rgba(245, 158, 11, 0.75)",
-            "rgba(239, 68, 68, 0.75)",
-            "rgba(139, 92, 246, 0.75)",
-            "rgba(14, 165, 233, 0.75)",
-            "rgba(236, 72, 153, 0.75)",
-            "rgba(100, 116, 139, 0.75)",
-            "rgba(20, 184, 166, 0.75)",
-            "rgba(249, 115, 22, 0.75)"
-        ];
-        const borderColors = bgColors.map(c => c.replace("0.75", "1"));
+        // 대한민국만 눈에 띄는 빨간색, 다른 모든 국가는 통일된 차분한 색상 적용
+        const datasets = (chartData.datasets || []).map((ds, idx) => {
+            if (chartType === "line") {
+                const isKorea = koreaRegex.test(String(ds.label || ""));
+                return {
+                    label: ds.label || "값",
+                    data: ds.data || [],
+                    borderColor: isKorea ? "rgba(239, 68, 68, 1)" : "rgba(148, 163, 184, 0.8)",
+                    backgroundColor: isKorea ? "rgba(239, 68, 68, 0.15)" : "rgba(148, 163, 184, 0.05)",
+                    borderWidth: isKorea ? 3.5 : 1.8,
+                    pointRadius: isKorea ? 4.5 : 2.5,
+                    pointHoverRadius: isKorea ? 6.5 : 4,
+                    pointBackgroundColor: isKorea ? "rgba(239, 68, 68, 1)" : "rgba(148, 163, 184, 0.8)",
+                    fill: false,
+                    tension: 0.15
+                };
+            } else {
+                // 막대 차트: labels 중 대한민국 위치 검사
+                const labels = chartData.labels || [];
+                const bgColors = labels.map(lbl => koreaRegex.test(String(lbl)) ? "rgba(239, 68, 68, 0.85)" : "rgba(59, 130, 246, 0.65)");
+                const borderColors = labels.map(lbl => koreaRegex.test(String(lbl)) ? "rgba(239, 68, 68, 1)" : "rgba(59, 130, 246, 0.95)");
 
-        const datasets = (chartData.datasets || []).map((ds, idx) => ({
-            label: ds.label || "값",
-            data: ds.data || [],
-            backgroundColor: chartType === "line" ? "rgba(37, 99, 235, 0.15)" : bgColors,
-            borderColor: chartType === "line" ? "rgba(37, 99, 235, 1)" : borderColors,
-            borderWidth: 1.5,
-            fill: chartType === "line",
-            tension: 0.25
-        }));
+                return {
+                    label: ds.label || "값",
+                    data: ds.data || [],
+                    backgroundColor: ds.backgroundColor && Array.isArray(ds.backgroundColor) ? ds.backgroundColor : bgColors,
+                    borderColor: ds.borderColor && Array.isArray(ds.borderColor) ? ds.borderColor : borderColors,
+                    borderWidth: 1.2
+                };
+            }
+        });
 
         nlChartInstance = new Chart(ctx, {
             type: chartType,
