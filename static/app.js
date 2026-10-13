@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 2. 임시 AI 로딩 말풍선
         const loadingId = "loading-" + Date.now();
-        appendChatMessage("ai", "🤖 AI 멘토", "생각하고 있어요... 잠시만 기다려 주세요! 🤔", loadingId);
+        appendChatMessage("ai", "📊 AI 데이터 분석관", "데이터 및 계산 결과를 바탕으로 분석 중입니다...", loadingId);
 
         try {
             console.log(`[QA] 후속 질문 전송: "${question}"`);
@@ -632,7 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("[ERROR] Q&A 오류:", err);
             const loadingBubble = document.getElementById(loadingId);
             if (loadingBubble) {
-                loadingBubble.querySelector(".chat-text").textContent = `죄송해요, 오류가 발생했어요: ${err.message}`;
+                loadingBubble.querySelector(".chat-text").textContent = `오류가 발생했습니다: ${err.message}`;
             }
         } finally {
             btnQaSend.disabled = false;
