@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Data Insight Builder</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 1. 헤더 영역 -->
+        <header class="header">
+            <div class="header-title-row">
+                <h1>📊 AI Data Insight Builder</h1>
+                <span id="server-status" class="badge badge-success">서버 연결 중...</span>
+            </div>
+            <p class="subtitle">공공데이터 CSV를 업로드하면, Pandas가 오차 없이 계산하고 Gemini가 7대 원칙 보고서를 작성합니다.</p>
+            <div class="notice-bar">
+                ⚠️ <strong>메모리 안내:</strong> 업로드된 데이터는 서버 메모리에만 임시 보관되며 서버를 재시작하면 자동 소멸됩니다.
+            </div>
+        </header>
+
+        <!-- 2. Step 1: 파일 업로드 및 데이터 진단 -->
+        <section class="card section-upload">
+            <h2>1단계. CSV 파일 업로드 & 품질 진단</h2>
+            <div class="upload-box" id="drop-zone">
+                <input type="file" id="csv-file-input" accept=".csv" class="file-input">
+                <div class="upload-content">
+                    <span class="upload-icon">📁</span>
+                    <p id="file-select-label">CSV 파일을 드래그하여 놓거나 클릭하여 선택하세요</p>
+                    <span class="file-info-hint">(.csv 형식, 최대 10MB)</span>
+                </div>
+            </div>
+            <button id="btn-inspect" class="btn btn-primary" disabled>파일 진단 시작</button>
+
+            <!-- 진단 결과 패널 (처음엔 숨김) -->
+            <div id="inspect-result-panel" class="hidden">
+                <div class="meta-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">파일명</span>
+                        <span id="meta-filename" class="meta-val">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">인코딩 / 스킵 줄</span>
+                        <span id="meta-encoding" class="meta-val">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">데이터 규모</span>
+                        <span id="meta-shape" class="meta-val">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">권장 기준연도</span>
+                        <span id="meta-rec-year" class="meta-val highlight">-</span>
+                    </div>
+                </div>
+
+                <div id="warnings-box" class="warnings-box hidden">
+                    <h3>⚠️ 데이터 주의사항 및 경고</h3>
+                    <ul id="warnings-list"></ul>
+                </div>
+
+                <!-- 10행 미리보기 테이블 -->
+                <div class="table-section">
+                    <div class="table-header-row">
+                        <h3>📋 데이터 미리보기 (상위 10행)</h3>
+                        <button id="btn-toggle-preview" class="btn btn-sm btn-outline">펼치기 / 접기</button>
+                    </div>
+                    <div id="preview-table-wrapper" class="table-wrapper">
+                        <table id="preview-table">
+                            <thead id="preview-thead"></thead>
+                            <tbody id="preview-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Step 2: 분석 도구 & 연도 선택 (직접 선택 + AI 추천) -->
+        <section class="card section-suggest hidden" id="suggest-section">
+            <div class="section-title-row">
+                <h2>2단계. 분석 도구 & 연도 선택</h2>
+            </div>
+            
+            <!-- 탭 전환 버튼 -->
+            <div class="tab-buttons">
+                <button id="tab-custom-btn" class="tab-btn active">🛠️ 직접 도구 & 연도 선택</button>
+                <button id="tab-ai-btn" class="tab-btn">🤖 Gemini AI 자동 추천 분석</button>
+            </div>
+
+            <!-- 패널 1: 직접 커스텀 제어 패널 (기본 활성화) -->
+            <div id="panel-custom-control" class="custom-control-panel">
+                <div class="control-grid">
+                    <div class="control-group">
+                        <label for="select-tool"><strong>분석 도구 (T1 ~ T12)</strong></label>
+                        <select id="select-tool" class="form-select">
+                            <option value="T7" selected>[T7] 상위 / 하위 N개국 순위 (막대 차트)</option>
+                            <option value="T6">[T6] 주요 국가 연도별 시계열 추이 (선 차트)</option>
+                            <option value="T12">[T12] 대한민국 vs 세계 평균·중앙값 비교 (강조 차트)</option>
+                            <option value="T8">[T8] 소득 그룹(High/Low)별 평균 비교 (막대 차트)</option>
+                            <option value="T9">[T9] 두 시점 사이 변화량·성장률 분석</option>
+                            <option value="T10">[T10] 데이터 구간별 빈도 분포 (히스토그램)</option>
+                            <option value="T11">[T11] 두 연도 간 상관계수 및 산점도 (Scatter)</option>
+                            <option value="T5">[T5] 기초 통계량 (평균, 중앙값, 최소/최대)</option>
+                            <option value="T3">[T3] 연도별 데이터 충실도 분석</option>
+                            <option value="T4">[T4] World, OECD 등 집계 요약 행 탐지</option>
+                            <option value="T2">[T2] 종합 데이터 품질 진단 보고서</option>
+                            <option value="T1">[T1] 연도 열 행 변환 (Wide ➡️ Long)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="group-base-year">
+                        <label for="select-base-year"><strong>기준 연도 선택</strong></label>
+                        <select id="select-base-year" class="form-select">
+                            <!-- JS가 데이터셋의 연도 목록으로 자동 채움 -->
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="group-sub-option">
+                        <label id="label-sub-option" for="select-sub-option"><strong>순위 옵션</strong></label>
+                        <select id="select-sub-option" class="form-select">
+                            <option value="top_10" selected>상위 10개국 (Top 10)</option>
+                            <option value="top_5">상위 5개국 (Top 5)</option>
+                            <option value="bottom_10">하위 10개국 (Bottom 10)</option>
+                            <option value="bottom_5">하위 5개국 (Bottom 5)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="custom-run-bar">
+                    <button id="btn-custom-run" class="btn btn-primary btn-lg">▶ 선택한 설정으로 분석 실행</button>
+                    <span id="custom-run-hint" class="hint-text">💡 원하는 연도와 도구를 고르고 버튼을 누르면 즉시 차트가 갱신됩니다.</span>
+                </div>
+            </div>
+
+            <!-- 패널 2: Gemini AI 자동 제안 패널 -->
+            <div id="panel-ai-suggestions" class="ai-panel hidden">
+                <div class="ai-header-sub">
+                    <p class="section-desc">AI가 데이터의 연도 범위와 결측치를 파악하여, 12개 도구 중 가장 가치 있는 분석을 선별했습니다.</p>
+                    <button id="btn-get-suggestions" class="btn btn-sm btn-secondary">💡 AI 추천 다시 생성</button>
+                </div>
+                <div id="suggestions-container" class="suggestions-grid"></div>
+            </div>
+        </section>
+
+        <!-- 4. Step 3: Pandas 계산 결과 및 시각화 차트 -->
+        <section class="card section-result hidden" id="result-section">
+            <div class="section-title-row">
+                <h2>3단계. Pandas 계산 결과 및 시각화 차트</h2>
+                <span id="result-tool-badge" class="badge badge-info">T7: top_bottom_n</span>
+            </div>
+
+            <!-- 투명한 메타데이터 배지 행 -->
+            <div class="calc-meta-bar">
+                <span><strong>기준 시점:</strong> <span id="calc-base-period">-</span></span>
+                <span><strong>사용한 행:</strong> <span id="calc-used-rows">-</span></span>
+                <span><strong>제외된 행:</strong> <span id="calc-excluded-rows">-</span></span>
+                <span><strong>단위:</strong> <span id="calc-unit">-</span></span>
+            </div>
+            <div id="calc-exclusion-reason" class="caveat-text"></div>
+
+            <!-- Chart.js 캔버스 영역 -->
+            <div class="chart-container" id="chart-wrapper">
+                <canvas id="insightChart"></canvas>
+            </div>
+
+            <!-- 수치 요약 테이블 -->
+            <div class="calc-table-wrapper" id="calc-table-container"></div>
+        </section>
+
+        <!-- 5. Step 4: Gemini 보고서 해석 (Prompt A/B) -->
+        <section class="card section-explain hidden" id="explain-section">
+            <h2>4단계. Gemini AI 보고서 해석 (비교 검증)</h2>
+            <p class="section-desc">
+                <strong>모드 A</strong>는 AI에게 계산 결과를 안 주고 작성시킨 비교용(환각 관찰용)이며, 
+                <strong>모드 B</strong>는 Pandas의 실제 계산 결과만 바탕으로 <strong>7개 정식 헤더</strong>를 작성합니다.
+            </p>
+
+            <div class="mode-toggle-group">
+                <label class="mode-radio">
+                    <input type="radio" name="explain-mode" value="B" checked>
+                    <span class="mode-label">
+                        <strong>모드 B (정식 보고서)</strong>
+                        <small>Pandas 계산 수치 기반 + 7개 필수 헤더 엄격 준수</small>
+                    </span>
+                </label>
+                <label class="mode-radio">
+                    <input type="radio" name="explain-mode" value="A">
+                    <span class="mode-label">
+                        <strong>모드 A (비교용 프롬프트)</strong>
+                        <small>계산 결과 미제공 (AI의 추정 및 허술함 비교용)</small>
+                    </span>
+                </label>
+            </div>
+
+            <button id="btn-explain" class="btn btn-success">📝 선택한 모드로 AI 보고서 생성</button>
+
+            <!-- AI 해설 리포트 출력 창 -->
+            <div id="explain-output-box" class="report-box hidden">
+                <div class="report-header">
+                    <span id="report-mode-badge" class="badge badge-purple">모드 B 보고서</span>
+                    <span id="report-model-name" class="model-tag">Gemini</span>
+                </div>
+                <div id="report-content" class="report-content markdown-body"></div>
+            </div>
+        </section>
+
+        <!-- 6. Step 5: AI 데이터 선생님에게 후속 질문하기 (Q&A) -->
+        <section class="card section-qa" id="qa-section">
+            <div class="section-title-row">
+                <h2>5단계. 💬 AI 멘토에게 후속 질문하기 (쉬운 해설)</h2>
+                <span class="badge badge-info">중고등학생 눈높이 답변</span>
+            </div>
+            <p class="section-desc">표와 숫자를 보고 이해가 안 가는 점이 있나요? 질문을 남기면 데이터에 기반하여 아주 쉽게 설명해 드립니다.</p>
+
+            <!-- 추천 질문 칩들 -->
+            <div class="sample-questions">
+                <span class="sample-title">💡 클릭해서 바로 질문해 보세요:</span>
+                <button class="chip-btn" data-q="왜 중동 국가들이 1등에 몰려 있어?">왜 중동 국가들이 1등에 몰려 있어?</button>
+                <button class="chip-btn" data-q="우리나라(한국)는 몇 등이고 세계에서 어느 정도야?">우리나라(한국)는 세계에서 어느 정도야?</button>
+                <button class="chip-btn" data-q="이 표에서 가장 눈에 띄는 격차가 뭐야?">가장 눈에 띄는 격차가 뭐야?</button>
+                <button class="chip-btn" data-q="이 데이터로는 알 수 없는 게 뭐야?">이 데이터로는 알 수 없는 게 뭐야?</button>
+            </div>
+
+            <!-- 대화 채팅 박스 -->
+            <div id="chat-messages" class="chat-messages-container">
+                <div class="chat-bubble chat-ai">
+                    <div class="chat-sender">🤖 AI 멘토</div>
+                    <div class="chat-text">
+                        안녕하세요! 분석 결과에 대해 궁금한 점이 있으신가요? 
+                        위의 추천 질문을 누르거나, 아래 입력창에 편하게 질문해 주세요! 중고등학생도 쏙쏙 이해할 수 있게 쉬운 비유로 설명해 드릴게요.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 질문 입력 바 -->
+            <div class="qa-input-bar">
+                <input type="text" id="qa-input" class="qa-input" placeholder="궁금한 점을 자유롭게 물어보세요 (예: 1등 나라는 왜 100%야?)">
+                <button id="btn-qa-send" class="btn btn-primary">질문하기</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 스크립트 연결 -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
