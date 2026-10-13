@@ -20,6 +20,76 @@ def find_entity_column(df):
     return df.columns[0] if len(df.columns) > 0 else None
 
 
+COUNTRY_ALIASES = {
+    "대한민국": "Korea, Rep.",
+    "한국": "Korea, Rep.",
+    "남한": "Korea, Rep.",
+    "korea": "Korea, Rep.",
+    "south korea": "Korea, Rep.",
+    "kor": "Korea, Rep.",
+    "북한": "Korea, Dem. People's Rep.",
+    "north korea": "Korea, Dem. People's Rep.",
+    "미국": "United States",
+    "usa": "United States",
+    "일본": "Japan",
+    "중국": "China",
+    "독일": "Germany",
+    "영국": "United Kingdom",
+    "프랑스": "France",
+    "러시아": "Russian Federation",
+    "사우디": "Saudi Arabia",
+    "사우디아라비아": "Saudi Arabia",
+    "아랍에미리트": "United Arab Emirates",
+    "uae": "United Arab Emirates",
+    "바레인": "Bahrain",
+    "쿠웨이트": "Kuwait",
+    "카타르": "Qatar",
+    "덴마크": "Denmark",
+    "노르웨이": "Norway",
+    "스웨덴": "Sweden",
+    "핀란드": "Finland",
+    "스위스": "Switzerland",
+    "싱가포르": "Singapore",
+    "호주": "Australia",
+    "캐나다": "Canada"
+}
+
+
+def resolve_entity_name(df, name_query, entity_col=None):
+    """
+    한글 국가명('대한민국', '한국', '미국' 등)이나 약어를 영문 공식 World Bank 국가명으로 자동 변환합니다.
+    """
+    if not name_query:
+        return name_query
+
+    if entity_col is None:
+        entity_col = find_entity_column(df)
+    if not entity_col or entity_col not in df.columns:
+        return name_query
+
+    q = str(name_query).strip()
+    q_lower = q.lower()
+
+    # 1. Alias 사전 매핑
+    if q_lower in COUNTRY_ALIASES:
+        target = COUNTRY_ALIASES[q_lower]
+        if target in df[entity_col].values:
+            return target
+
+    # 2. 정확 일치 (대소문자 무시)
+    for val in df[entity_col].dropna().unique():
+        if str(val).strip().lower() == q_lower:
+            return val
+
+    # 3. 부분 일치 검색
+    for val in df[entity_col].dropna().unique():
+        val_str = str(val).strip().lower()
+        if q_lower in val_str or val_str in q_lower:
+            return val
+
+    return name_query
+
+
 def filter_pure_entities(df, exclude_aggregates=True, entity_col=None):
     """
     집계 요약 행(World, OECD, Region, IncomeGroup 등)을 제외하고
@@ -353,6 +423,8 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
     if not entities:
         default_candidates = ["Korea, Rep.", "United States", "Japan", "Germany", "China"]
         entities = [c for c in default_candidates if c in available_entities] or available_entities[:3]
+    elif isinstance(entities, str):
+        entities = [entities]
 
     datasets = []
     used_entities = []
@@ -361,23 +433,36 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
         "rgba(255, 99, 132, 1)",
         "rgba(75, 192, 192, 1)",
         "rgba(255, 159, 64, 1)",
-        "rgba(153, 102, 255, 1)"
+        "rgba(153, 102, 255, 1)",
+        "rgba(245, 158, 11, 1)",
+        "rgba(16, 185, 129, 1)"
     ]
 
     for idx, ent in enumerate(entities):
-        row = df[df[entity_col] == ent]
+        resolved_name = resolve_entity_name(df, ent, entity_col)
+        row = df[df[entity_col] == resolved_name]
+        if row.empty:
+            row = df[df[entity_col].astype(str).str.lower() == str(resolved_name).lower()]
         if row.empty:
             continue
-        used_entities.append(ent)
+
+        real_name = row[entity_col].values[0]
+        used_entities.append(real_name)
         values = [
             round(float(val), 2) if pd.notna(val) else None
             for val in row[year_cols].values[0]
         ]
         color = palette[idx % len(palette)]
+
+        display_label = real_name
+        if real_name == "Korea, Rep.":
+            display_label = "Korea, Rep. (대한민국)"
+
         datasets.append({
-            "label": ent,
+            "label": display_label,
             "data": values,
             "borderColor": color,
+            "backgroundColor": color.replace("1)", "0.1)"),
             "fill": False,
             "tension": 0.1
         })
@@ -713,10 +798,10 @@ def compare_one_vs_all(df, base_period=None, target_entity="Korea, Rep.", exclud
     mean_val = round(float(series.mean()), 2)
     median_val = round(float(series.median()), 2)
 
-    target_row = pure_df[pure_df[entity_col].astype(str).str.lower() == str(target_entity).lower()]
+    resolved_target = resolve_entity_name(pure_df, target_entity, entity_col)
+    target_row = pure_df[pure_df[entity_col].astype(str).str.lower() == str(resolved_target).lower()]
     if target_row.empty:
-        # 혹시 국가명이 정확히 일치하지 않으면 부분 일치 탐색
-        target_row = pure_df[pure_df[entity_col].astype(str).str.contains(str(target_entity), case=False, na=False)]
+        target_row = pure_df[pure_df[entity_col].astype(str).str.contains(str(resolved_target), case=False, na=False)]
 
     if target_row.empty:
         raise ValueError(f"대상 항목 '{target_entity}'을(를) 데이터에서 찾을 수 없습니다.")
@@ -727,7 +812,8 @@ def compare_one_vs_all(df, base_period=None, target_entity="Korea, Rep.", exclud
     diff_from_mean = round(target_val - mean_val, 2)
     diff_from_median = round(target_val - median_val, 2)
 
-    labels = [target_real_name, "전체 중앙값", "전체 평균"]
+    target_display = "Korea, Rep. (대한민국)" if target_real_name == "Korea, Rep." else target_real_name
+    labels = [target_display, "전체 중앙값", "전체 평균"]
     values = [target_val, median_val, mean_val]
 
     return {

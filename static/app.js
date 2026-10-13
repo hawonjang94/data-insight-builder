@@ -840,6 +840,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         font: { size: 15, weight: "bold" },
                         padding: { top: 10, bottom: 15 }
                     },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+                                return ` ${context.dataset.label || ''}: ${val !== null ? Number(val).toFixed(2) + '%' : '데이터 없음'}`;
+                            }
+                        }
+                    },
                     legend: {
                         display: datasets.length > 1 || chartType === "line"
                     }

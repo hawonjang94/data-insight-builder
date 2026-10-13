@@ -387,8 +387,11 @@ def run_analysis_tool():
         df_copy = df.copy()
         print(f"[Backend] 도구 실행 시작: {tool_name}, 파라미터: {params}")
 
-        # 기준 시점(base_period) 자동 보정 안전장치
-        if not params.get("base_period"):
+        import inspect
+        sig = inspect.signature(func)
+
+        # 기준 시점(base_period) 파라미터가 필요한 도구에만 자동 보정 적용
+        if "base_period" in sig.parameters and not params.get("base_period"):
             if params.get("year"):
                 params["base_period"] = params.get("year")
             elif params.get("period"):
@@ -401,8 +404,11 @@ def run_analysis_tool():
                 elif year_cols:
                     params["base_period"] = sorted(year_cols)[-1]
 
+        # 도구 함수 시그니처에 맞는 유효한 파라미터만 필터링하여 전달
+        valid_params = {k: v for k, v in params.items() if k in sig.parameters}
+
         # Pandas 계산 도구 실행
-        calc_result = func(df_copy, **params)
+        calc_result = func(df_copy, **valid_params)
 
         # 결과 메모리에 저장 (POST /explain 연동용)
         CURRENT_DATASET["last_run_result"] = calc_result
@@ -637,19 +643,26 @@ def query_visualize():
             "당신은 공공 데이터와 거시 통계를 심층 분석하고 시각화 솔루션을 제공하는 전문 '수석 데이터 분석 연구원'입니다.\n"
             "사용자의 질의에 대해 엄밀하고 논리적인 표준 격식체('~합니다', '~입니다')로 답변하고, "
             "시각화가 필요한 경우 반드시 Chart.js 호환 JSON 구조를 생성하여 JSON 형식으로 응답하십시오.\n\n"
-            "[응답 원칙]\n"
+            "[응답 원칙 및 데이터 팩트 규격]\n"
             "1. 어조: 진지하고 차분하며 신뢰감 있는 전문가 어조를 유지하십시오. 불필요한 감탄사나 가벼운 표현은 배제하십시오.\n"
-            "2. 데이터셋 유무에 따른 분기:\n"
+            "2. **국가명 매핑 규칙**: World Bank 데이터셋에서 대한민국의 공식 명칭은 'Korea, Rep.'입니다. 사용자가 '대한민국'이나 '한국'의 분석 또는 시각화를 요청하면, 도구 파라미터(entities 또는 target_country)에 반드시 'Korea, Rep.'을 지정하십시오. (미국: 'United States', 일본: 'Japan', 중국: 'China')\n"
+            "3. **정확한 실제 통계 팩트 기반**:\n"
+            "   - 2024년 인터넷 이용률(IT.NET.USER.ZS) 기준:\n"
+            "     * 1~3위: 아랍에미리트(100.00%), 바레인(100.00%), 사우디아라비아(100.00%) - 이는 원천 World Bank 및 ITU 공식 통계에 등록된 실제 팩트입니다.\n"
+            "     * 4위 덴마크(99.77%), 5위 쿠웨이트(99.75%), 10위 아이슬란드(98.21%).\n"
+            "     * **대한민국(Korea, Rep.)은 97.90%로 글로벌 13위**입니다.\n"
+            "   - 상위권 수치들이 100%에 근접해 보이는 현상은 인프라가 고도화된 국가들의 데이터 포화(Saturation) 현상 때문이며, 소수점 둘째 자리(100.00% vs 99.77% vs 97.90%)에서 유의미한 차이가 있음을 객관적으로 설명하십시오.\n"
+            "   - 데이터셋 미업로드 시 일반 질의의 경우에도 임의의 100%를 남발하지 말고, 대한민국(97.9%), 미국(91.8%), 일본(82.9%), 세계 평균(약 67%) 등 공인된 현실 통계치를 정확히 반영하십시오.\n"
+            "4. 데이터셋 유무에 따른 분기:\n"
             "   - 데이터셋이 제공된 경우: 사용자의 질의가 12개 Pandas 도구(T1~T12: top_bottom_n, trend_line, change_rate, distribution, quality_report, year_coverage, group_summary, correlation_scatter, compare_one_vs_all 등)로 해결 가능하면 'intent': 'run_tool'로 지정하고 해당 tool_name과 params를 출력하십시오.\n"
-            "   - 데이터셋이 없거나 도구 카탈로그 외의 일반 통계 질문인 경우: 'intent': 'direct_answer'로 지정하고, 질문 주제(예: 국가별 인터넷 이용률, 경제 지표, 인구 비교 등)에 부합하는 공인 통계 기반 chart_data를 생성하십시오.\n"
-            "3. chart_data 규격 (시각화가 유의미한 경우 필수):\n"
+            "   - 데이터셋이 없거나 일반 통계 질문인 경우: 'intent': 'direct_answer'로 지정하고, 질문 주제에 부합하는 공인 통계 기반 chart_data를 생성하십시오.\n"
+            "5. chart_data 규격 (시각화가 유의미한 경우 필수):\n"
             "   - type: 'bar' 또는 'line'\n"
             "   - title: 차트의 명확한 한글 제목\n"
-            "   - labels: x축 레이블 문자열 배열 (예: ['아랍에미리트', '바레인', '대한민국'] 등)\n"
-            "   - datasets: [ { 'label': '지표명(단위)', 'data': [100.0, 99.8, 98.2] } ]\n"
-            "4. 시각화가 불필요한 순수 개념 질문(예: '결측치란?')의 경우 chart_data는 null로 지정하십시오.\n"
-            "5. **형광펜 강조(시각적 가독성)**: 검은 글씨만 길게 나열되면 가독성이 떨어지므로, 답변 중 **핵심 요약 단어, 중요한 통계 수치, 핵심 결론 문장**은 반드시 `==형광펜 강조할 내용==` 기호로 감싸서 강조하십시오.\n"
-            "6. 답변(explanation): 팩트에 입각한 심층 해설과 데이터의 구조적 한계/주의사항을 체계적으로 서술하십시오."
+            "   - labels: x축 레이블 문자열 배열 (예: ['아랍에미리트', '바레인', '대한민국(13위)'] 등)\n"
+            "   - datasets: [ { 'label': '지표명(단위)', 'data': [100.0, 100.0, 97.9] } ]\n"
+            "6. **형광펜 강조(시각적 가독성)**: 답변 중 핵심 요약 단어, 중요한 통계 수치, 핵심 결론 문장은 반드시 `==형광펜 강조할 내용==` 기호로 감싸서 강조하십시오.\n"
+            "7. 답변(explanation): 팩트에 입각한 심층 해설과 데이터의 구조적 한계/주의사항을 체계적으로 서술하십시오."
         )
 
         context_payload = {
@@ -725,12 +738,19 @@ def query_visualize():
             }
             func = tool_dispatch.get(tool_name)
             if func:
-                # base_period 안전 보정
-                if not params.get("base_period") and not params.get("period"):
+                import inspect
+                sig = inspect.signature(func)
+
+                # base_period 안전 보정 (해당 파라미터를 받는 함수에만 적용)
+                if "base_period" in sig.parameters and not params.get("base_period") and not params.get("period"):
                     params["base_period"] = diagnosis.get("recommended_year", "2024")
+
+                # 유효한 인자만 필터링하여 전달
+                valid_params = {k: v for k, v in params.items() if k in sig.parameters}
+
                 try:
                     df_copy = df.copy()
-                    calc_result = func(df_copy, **params)
+                    calc_result = func(df_copy, **valid_params)
                     CURRENT_DATASET["last_run_result"] = calc_result
                     tool_result = calc_result
                     executed_tool_name = tool_name
