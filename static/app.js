@@ -156,6 +156,13 @@ document.addEventListener("DOMContentLoaded", () => {
             metaShape.textContent = `${data.row_count.toLocaleString()}행 × ${data.column_count}열`;
             metaRecYear.textContent = data.recommended_year ? `${data.recommended_year}년` : "연도 열 없음";
 
+            // 자연어 질의 패널 상태 배지 갱신
+            const nlBadge = document.getElementById("nl-dataset-status-badge");
+            if (nlBadge) {
+                nlBadge.className = "badge badge-success";
+                nlBadge.textContent = `📊 원천 데이터셋 연동 모드: ${data.filename}`;
+            }
+
             // 경고 목록 렌더링
             if (data.warnings && data.warnings.length > 0) {
                 warningsList.innerHTML = data.warnings.map(w => `<li>${w}</li>`).join("");
@@ -571,7 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================================
-    // 8. 5단계: AI 멘토 후속 질문 Q&A (/ask)
+    // 8. 5단계: AI 데이터 분석관 후속 질문 Q&A (/ask)
     // ==========================================================
     const qaInput = document.getElementById("qa-input");
     const btnQaSend = document.getElementById("btn-qa-send");
@@ -585,8 +592,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // 추천 질문 칩 클릭
-    document.querySelectorAll(".chip-btn").forEach(chip => {
+    // 5단계 추천 질문 칩 클릭
+    document.querySelectorAll("#qa-section .chip-btn").forEach(chip => {
         chip.addEventListener("click", () => {
             const q = chip.getAttribute("data-q");
             qaInput.value = q;
@@ -651,6 +658,179 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         chatMessages.appendChild(bubble);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // ==========================================================
+    // 9. 자연어 데이터 질의 & 맞춤 시각화 (자유 프롬프트 /query_visualize)
+    // ==========================================================
+    const nlQueryInput = document.getElementById("nl-query-input");
+    const btnNlQuerySend = document.getElementById("btn-nl-query-send");
+    const nlOutputBox = document.getElementById("nl-output-box");
+    const nlOutputBadge = document.getElementById("nl-output-badge");
+    const nlOutputMeta = document.getElementById("nl-output-meta");
+    const nlAnswerContent = document.getElementById("nl-answer-content");
+    const nlChartWrapper = document.getElementById("nl-chart-wrapper");
+    const nlSyncBanner = document.getElementById("nl-sync-banner");
+    const btnNlGoReport = document.getElementById("btn-nl-go-report");
+
+    // 추천 질문 칩 클릭 바인딩
+    document.querySelectorAll(".nl-chip-btn").forEach(chip => {
+        chip.addEventListener("click", () => {
+            const q = chip.getAttribute("data-q");
+            nlQueryInput.value = q;
+            sendNlQuery();
+        });
+    });
+
+    btnNlQuerySend.addEventListener("click", sendNlQuery);
+    nlQueryInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendNlQuery();
+        }
+    });
+
+    async function sendNlQuery() {
+        const query = nlQueryInput.value.trim();
+        if (!query) return;
+
+        btnNlQuerySend.disabled = true;
+        btnNlQuerySend.textContent = "분석 및 시각화 생성 중...";
+        nlOutputBox.classList.remove("hidden");
+        nlAnswerContent.innerHTML = "<p><em>질문 의도를 심층 분석하고 데이터 및 시각화를 구성하고 있습니다. 잠시만 기다려 주십시오...</em></p>";
+        nlChartWrapper.classList.add("hidden");
+        nlSyncBanner.classList.add("hidden");
+
+        try {
+            console.log(`[NL_QUERY] 자연어 질의 전송: "${query}"`);
+            const res = await fetch("/query_visualize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: query })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "질의 분석 처리에 실패했습니다.");
+            }
+
+            const data = await res.json();
+            console.log(`[NL_QUERY] 응답 수신: intent=${data.intent}, has_chart=${data.has_chart}`);
+
+            // 1. 배지 및 메타데이터 갱신
+            if (data.executed_tool_name) {
+                nlOutputBadge.className = "badge badge-success";
+                nlOutputBadge.textContent = `Pandas 도구 실측 실행: ${data.executed_tool_name}`;
+                nlOutputMeta.textContent = `${data.filename || "데이터셋"} 연동`;
+                nlSyncBanner.classList.remove("hidden");
+
+                // Step 3 및 4 연동 데이터 업데이트
+                if (data.tool_result) {
+                    lastRunResult = data.tool_result;
+                }
+            } else if (data.has_dataset) {
+                nlOutputBadge.className = "badge badge-info";
+                nlOutputBadge.textContent = "원천 데이터셋 기반 분석";
+                nlOutputMeta.textContent = `${data.filename} 참조`;
+            } else {
+                nlOutputBadge.className = "badge badge-purple";
+                nlOutputBadge.textContent = "일반 공공 통계 분석";
+                nlOutputMeta.textContent = "Gemini 수석 분석관 모델";
+            }
+
+            // 2. 진지하고 분석적인 답변 렌더링
+            nlAnswerContent.innerHTML = formatMarkdown(data.explanation);
+
+            // 3. 맞춤 차트 시각화
+            if (data.has_chart && data.chart_data && data.chart_data.labels && data.chart_data.labels.length > 0) {
+                nlChartWrapper.classList.remove("hidden");
+                renderNlQueryChart(data.chart_data);
+            } else {
+                nlChartWrapper.classList.add("hidden");
+            }
+
+        } catch (err) {
+            console.error("[ERROR] NL 질의 처리 실패:", err);
+            nlAnswerContent.innerHTML = `<p style="color:var(--warning-text);"><strong>오류 발생:</strong> ${err.message}</p>`;
+        } finally {
+            btnNlQuerySend.disabled = false;
+            btnNlQuerySend.textContent = "질의 및 시각화 실행";
+        }
+    }
+
+    function renderNlQueryChart(chartData) {
+        if (window.nlQueryChart) {
+            window.nlQueryChart.destroy();
+            window.nlQueryChart = null;
+        }
+
+        const ctx = document.getElementById("nlQueryChart").getContext("2d");
+        const chartType = (chartData.type || "bar").toLowerCase();
+
+        // 색상 팔레트
+        const bgColors = [
+            "rgba(37, 99, 235, 0.75)",
+            "rgba(16, 185, 129, 0.75)",
+            "rgba(245, 158, 11, 0.75)",
+            "rgba(239, 68, 68, 0.75)",
+            "rgba(139, 92, 246, 0.75)",
+            "rgba(14, 165, 233, 0.75)",
+            "rgba(236, 72, 153, 0.75)",
+            "rgba(100, 116, 139, 0.75)",
+            "rgba(20, 184, 166, 0.75)",
+            "rgba(249, 115, 22, 0.75)"
+        ];
+        const borderColors = bgColors.map(c => c.replace("0.75", "1"));
+
+        const datasets = (chartData.datasets || []).map((ds, idx) => ({
+            label: ds.label || "값",
+            data: ds.data || [],
+            backgroundColor: chartType === "line" ? "rgba(37, 99, 235, 0.15)" : bgColors,
+            borderColor: chartType === "line" ? "rgba(37, 99, 235, 1)" : borderColors,
+            borderWidth: 1.5,
+            fill: chartType === "line",
+            tension: 0.25
+        }));
+
+        window.nlQueryChart = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: chartData.labels || [],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: !!chartData.title,
+                        text: chartData.title || "",
+                        font: { size: 15, weight: "bold" },
+                        padding: { top: 10, bottom: 15 }
+                    },
+                    legend: {
+                        display: datasets.length > 1 || chartType === "line"
+                    }
+                },
+                scales: chartType !== "pie" && chartType !== "doughnut" ? {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "#f1f5f9" }
+                    },
+                    x: {
+                        grid: { color: "#f8fafc" }
+                    }
+                } : {}
+            }
+        });
+    }
+
+    if (btnNlGoReport) {
+        btnNlGoReport.addEventListener("click", () => {
+            explainSection.classList.remove("hidden");
+            explainSection.scrollIntoView({ behavior: "smooth" });
+            generateReport("B");
+        });
     }
 
     function formatMarkdown(text) {

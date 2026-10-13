@@ -77,6 +77,55 @@
             </div>
         </section>
 
+        <!-- 2. 자연어 데이터 질의 & 맞춤 시각화 (자유 프롬프트) -->
+        <section class="card section-nl-query" id="nl-query-section">
+            <div class="section-title-row">
+                <h2>🔍 자연어 데이터 질의 & 맞춤 시각화 (자유 프롬프트)</h2>
+                <span id="nl-dataset-status-badge" class="badge badge-purple">📁 데이터 미업로드 (일반 공공 통계 모드)</span>
+            </div>
+            <p class="section-desc">
+                파일 업로드 여부와 상관없이 언제든 자유롭게 질문해 보세요. 
+                통계 상식이나 데이터 분석 방법론 질의부터 국가 간 비교·추세 시각화 요청까지, 질문 의도를 분석하여 <strong>진지한 전문 분석 답변과 맞춤 차트</strong>를 즉시 제공합니다.
+            </p>
+
+            <!-- 추천 질문 및 시각화 프롬프트 칩들 -->
+            <div class="sample-questions">
+                <span class="sample-title">💡 클릭하여 바로 질의·시각화:</span>
+                <button class="chip-btn nl-chip-btn" data-q="세계 주요국 인터넷 보급률 상위 5개국 비교 차트 보여줘">세계 주요국 인터넷 보급률 상위 5개국 비교 차트</button>
+                <button class="chip-btn nl-chip-btn" data-q="대한민국의 연도별 인터넷 이용률 추이 선 그래프 그려줘">대한민국 연도별 이용률 추이</button>
+                <button class="chip-btn nl-chip-btn" data-q="상위 10개국 순위 막대그래프로 시각화해줘">상위 10개국 순위 시각화 (데이터셋 연동 시 실측)</button>
+                <button class="chip-btn nl-chip-btn" data-q="데이터 분석에서 결측치(Missing Value)의 발생 원인과 해결 방안은?">결측치 분석의 중요성과 처리 방안</button>
+            </div>
+
+            <!-- 자연어 입력창 바 -->
+            <div class="nl-input-bar">
+                <input type="text" id="nl-query-input" class="nl-query-input" placeholder="질문 또는 시각화 요청을 입력하십시오 (예: 상위 5개국 비교 차트 그려줘, 결측치 처리 방법 등)">
+                <button id="btn-nl-query-send" class="btn btn-primary">질의 및 시각화 실행</button>
+            </div>
+
+            <!-- 질의 결과 출력 영역 (기본 숨김, 실행 시 표시) -->
+            <div id="nl-output-box" class="nl-output-box hidden">
+                <div class="nl-output-header">
+                    <span id="nl-output-badge" class="badge badge-info">분석 완료</span>
+                    <span id="nl-output-meta" class="model-tag">Gemini & Pandas Engine</span>
+                </div>
+                
+                <!-- AI 분석 답변 영역 -->
+                <div id="nl-answer-content" class="nl-answer-content markdown-body"></div>
+
+                <!-- 시각화 차트 영역 -->
+                <div id="nl-chart-wrapper" class="chart-container nl-chart-container hidden">
+                    <canvas id="nlQueryChart"></canvas>
+                </div>
+
+                <!-- 업로드된 데이터셋 도구 실행 시 3/4단계 리포트 연계 안내 바 -->
+                <div id="nl-sync-banner" class="nl-sync-banner hidden">
+                    <span>💡 업로드된 데이터셋의 Pandas 계산이 완료되었습니다. 3단계 상세 테이블과 4단계 정식 7헤더 보고서로 이어보실 수 있습니다.</span>
+                    <button id="btn-nl-go-report" class="btn btn-sm btn-secondary">▶ 4단계 정식 보고서 생성하기</button>
+                </div>
+            </div>
+        </section>
+
         <!-- 3. Step 2: 분석 도구 & 연도 선택 (직접 선택 + AI 추천) -->
         <section class="card section-suggest hidden" id="suggest-section">
             <div class="section-title-row">

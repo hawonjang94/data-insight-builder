@@ -601,6 +601,161 @@ def ask_question_about_data():
         return jsonify({"error": f"질문 답변 중 오류가 발생했습니다: {str(e)}"}), 500
 
 
+@app.route("/query_visualize", methods=["POST"])
+def query_visualize():
+    """
+    파일 업로드 전 또는 업로드 후 AI suggest 전에 자유롭게 질문하고 맞춤 시각화를 요청할 수 있는 엔드포인트입니다.
+    - 데이터셋 업로드 여부와 상관없이 자유 질의 지원
+    - 시각화 요구 시 Chart.js 호환 데이터 자동 생성
+    - 데이터셋이 있고 12개 Pandas 도구와 일치 시 Pandas 직접 실행 후 실측 차트 연동
+    """
+    print("\n[Backend] POST /query_visualize 요청 수신")
+    data = request.get_json() or {}
+    query = data.get("query", "").strip()
+
+    if not query:
+        return jsonify({"error": "질문 내용을 입력해 주십시오."}), 400
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    if not api_key:
+        return jsonify({"error": "GEMINI_API_KEY가 설정되지 않았습니다 (.env 확인 필요)."}), 500
+
+    import tools
+    df = CURRENT_DATASET.get("df")
+    diagnosis = CURRENT_DATASET.get("diagnosis", {})
+    has_dataset = df is not None
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+
+        system_instruction = (
+            "당신은 공공 데이터와 거시 통계를 심층 분석하고 시각화 솔루션을 제공하는 전문 '수석 데이터 분석 연구원'입니다.\n"
+            "사용자의 질의에 대해 엄밀하고 논리적인 표준 격식체('~합니다', '~입니다')로 답변하고, "
+            "시각화가 필요한 경우 반드시 Chart.js 호환 JSON 구조를 생성하여 JSON 형식으로 응답하십시오.\n\n"
+            "[응답 원칙]\n"
+            "1. 어조: 진지하고 차분하며 신뢰감 있는 전문가 어조를 유지하십시오. 불필요한 감탄사나 가벼운 표현은 배제하십시오.\n"
+            "2. 데이터셋 유무에 따른 분기:\n"
+            "   - 데이터셋이 제공된 경우: 사용자의 질의가 12개 Pandas 도구(T1~T12: top_bottom_n, trend_line, change_rate, distribution, quality_report, year_coverage, group_summary, correlation_scatter, compare_one_vs_all 등)로 해결 가능하면 'intent': 'run_tool'로 지정하고 해당 tool_name과 params를 출력하십시오.\n"
+            "   - 데이터셋이 없거나 도구 카탈로그 외의 일반 통계 질문인 경우: 'intent': 'direct_answer'로 지정하고, 질문 주제(예: 국가별 인터넷 이용률, 경제 지표, 인구 비교 등)에 부합하는 공인 통계 기반 chart_data를 생성하십시오.\n"
+            "3. chart_data 규격 (시각화가 유의미한 경우 필수):\n"
+            "   - type: 'bar' 또는 'line'\n"
+            "   - title: 차트의 명확한 한글 제목\n"
+            "   - labels: x축 레이블 문자열 배열 (예: ['아랍에미리트', '바레인', '대한민국'] 등)\n"
+            "   - datasets: [ { 'label': '지표명(단위)', 'data': [100.0, 99.8, 98.2] } ]\n"
+            "4. 시각화가 불필요한 순수 개념 질문(예: '결측치란?')의 경우 chart_data는 null로 지정하십시오.\n"
+            "5. 답변(explanation): 팩트에 입각한 심층 해설과 데이터의 구조적 한계/주의사항을 체계적으로 서술하십시오."
+        )
+
+        context_payload = {
+            "has_dataset": has_dataset,
+            "filename": CURRENT_DATASET.get("filename") if has_dataset else None,
+            "recommended_year": diagnosis.get("recommended_year") if has_dataset else None,
+            "available_years": [col for col in df.columns if re.match(r"^(18|19|20)\d{2}$", col)] if has_dataset else None,
+            "available_tools": [t["name"] for t in tools.TOOL_CATALOG] if has_dataset else None
+        }
+
+        user_prompt = f"""
+[현재 환경 정보]
+{json.dumps(context_payload, ensure_ascii=False, indent=2)}
+
+[사용자 질의]
+"{query}"
+
+반환 JSON 스키마 규격:
+{{
+  "intent": "run_tool" | "direct_answer",
+  "tool_name": "top_bottom_n",
+  "params": {{ "base_period": "2024", "n": 10, "mode": "top" }},
+  "explanation": "질문에 대한 진지하고 체계적인 분석 해설 (한국어 격식체)",
+  "has_chart": true,
+  "chart_data": {{
+    "type": "bar",
+    "title": "차트 제목",
+    "labels": ["항목1", "항목2"],
+    "datasets": [
+      {{ "label": "지표명", "data": [10.5, 20.3] }}
+    ]
+  }}
+}}
+"""
+
+        resp = client.models.generate_content(
+            model=model_name,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type="application/json",
+                temperature=0.2
+            )
+        )
+
+        res_json = json.loads(resp.text)
+        intent = res_json.get("intent", "direct_answer")
+        explanation = res_json.get("explanation", "")
+        chart_data = res_json.get("chart_data")
+        has_chart = res_json.get("has_chart", bool(chart_data))
+
+        tool_result = None
+        executed_tool_name = None
+
+        # 데이터셋이 있고 도구 실행 intent인 경우 Pandas 도구 직접 실행
+        if has_dataset and intent == "run_tool":
+            tool_name = res_json.get("tool_name")
+            params = res_json.get("params") or {}
+
+            tool_dispatch = {
+                "T1": tools.reshape_wide_to_long, "reshape_wide_to_long": tools.reshape_wide_to_long,
+                "T2": tools.quality_report, "quality_report": tools.quality_report,
+                "T3": tools.year_coverage, "year_coverage": tools.year_coverage,
+                "T4": tools.detect_aggregates, "detect_aggregates": tools.detect_aggregates,
+                "T5": tools.describe_numeric, "describe_numeric": tools.describe_numeric,
+                "T6": tools.trend_line, "trend_line": tools.trend_line,
+                "T7": tools.top_bottom_n, "top_bottom_n": tools.top_bottom_n,
+                "T8": tools.group_summary, "group_summary": tools.group_summary,
+                "T9": tools.change_rate, "change_rate": tools.change_rate,
+                "T10": tools.distribution, "distribution": tools.distribution,
+                "T11": tools.correlation_scatter, "correlation_scatter": tools.correlation_scatter,
+                "T12": tools.compare_one_vs_all, "compare_one_vs_all": tools.compare_one_vs_all
+            }
+            func = tool_dispatch.get(tool_name)
+            if func:
+                # base_period 안전 보정
+                if not params.get("base_period") and not params.get("period"):
+                    params["base_period"] = diagnosis.get("recommended_year", "2024")
+                try:
+                    df_copy = df.copy()
+                    calc_result = func(df_copy, **params)
+                    CURRENT_DATASET["last_run_result"] = calc_result
+                    tool_result = calc_result
+                    executed_tool_name = tool_name
+                    if calc_result.get("chart_data"):
+                        chart_data = calc_result.get("chart_data")
+                        has_chart = True
+                    print(f"[Backend] NLP 질의 기반 도구 자동 실행 성공: {tool_name}")
+                except Exception as run_err:
+                    print(f"[Backend Warning] 도구 자동 실행 중 오류: {run_err}, 직행 모드로 대체")
+
+        return jsonify({
+            "status": "success",
+            "has_dataset": has_dataset,
+            "filename": CURRENT_DATASET.get("filename") if has_dataset else None,
+            "intent": intent,
+            "executed_tool_name": executed_tool_name,
+            "explanation": explanation,
+            "has_chart": has_chart,
+            "chart_data": chart_data,
+            "tool_result": tool_result
+        }), 200
+
+    except Exception as e:
+        print(f"[Backend Exception] query_visualize 실패: {e}")
+        return jsonify({"error": f"질의 및 시각화 처리 중 오류가 발생했습니다: {str(e)}"}), 500
+
+
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "true").lower() == "true"
     app.run(host="127.0.0.1", port=5000, debug=debug)
