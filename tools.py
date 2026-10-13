@@ -403,7 +403,7 @@ def describe_numeric(df, column=None, base_period=None, exclude_aggregates=True)
     }
 
 
-def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=None):
+def trend_line(df, entities=None, entity=None, countries=None, country=None, start_year=None, end_year=None, entity_col=None):
     """
     [T6] 선택된 주요 국가들의 연도별 시계열 변화 추이를 선 차트(Line Chart) 데이터로 추출합니다.
     """
@@ -421,8 +421,15 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
 
     available_entities = df[entity_col].dropna().tolist()
     if not entities:
-        default_candidates = ["Korea, Rep.", "United States", "Japan", "Germany", "China"]
-        entities = [c for c in default_candidates if c in available_entities] or available_entities[:3]
+        if entity:
+            entities = [entity]
+        elif countries:
+            entities = countries
+        elif country:
+            entities = [country]
+        else:
+            default_candidates = ["Korea, Rep.", "United States", "Japan", "Germany", "China"]
+            entities = [c for c in default_candidates if c in available_entities] or available_entities[:3]
     elif isinstance(entities, str):
         entities = [entities]
 
@@ -499,7 +506,7 @@ def trend_line(df, entities=None, start_year=None, end_year=None, entity_col=Non
     }
 
 
-def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True, entity_col=None):
+def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True, entity_col=None, include_entity=None):
     """
     [T7] 기준연도를 받아, 해당 시점의 상위 또는 하위 N개 국가 순위를 산출합니다.
     (기준 시점이 생략된 경우 데이터의 최신 연도를 자동으로 사용합니다)
@@ -532,6 +539,21 @@ def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True
     labels = sorted_df[entity_col].tolist()
     values = [round(float(v), 2) for v in sorted_df[target_col].tolist()]
     rank_list = [{"rank": i + 1, "name": labels[i], "value": values[i]} for i in range(len(labels))]
+
+    # include_entity가 지정된 경우, 순위권 밖이더라도 차트에 비교 항목으로 반드시 포함
+    if include_entity:
+        resolved_inc = resolve_entity_name(pure_df, include_entity, entity_col)
+        if resolved_inc and resolved_inc in valid_df[entity_col].values:
+            if not any(str(resolved_inc).lower() == str(l).lower() or str(resolved_inc).lower() in str(l).lower() for l in labels):
+                full_sorted = valid_df.sort_values(by=target_col, ascending=is_ascending).reset_index(drop=True)
+                inc_matches = full_sorted[full_sorted[entity_col] == resolved_inc]
+                if not inc_matches.empty:
+                    inc_rank = int(inc_matches.index[0]) + 1
+                    inc_val = round(float(inc_matches[target_col].values[0]), 2)
+                    display_inc_name = f"{resolved_inc} (대한민국 {inc_rank}위)" if "korea" in resolved_inc.lower() else f"{resolved_inc} ({inc_rank}위)"
+                    labels.append(display_inc_name)
+                    values.append(inc_val)
+                    rank_list.append({"rank": inc_rank, "name": display_inc_name, "value": inc_val})
 
     # 대한민국 여부에 따른 차별화 배색: 대한민국은 빨간색, 다른 모든 나라는 통일된 블루
     korea_keywords = ["korea, rep.", "korea", "대한민국", "한국", "남한"]

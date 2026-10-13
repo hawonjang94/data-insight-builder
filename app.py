@@ -741,6 +741,23 @@ def query_visualize():
                 import inspect
                 sig = inspect.signature(func)
 
+                # 사용자가 한국/대한민국에 대해 질문한 경우 차트에 무조건 한국이 포함되도록 파라미터 보정
+                is_asking_korea = any(k in query.lower() for k in ["한국", "대한민국", "남한", "korea", "우리나라"])
+                if is_asking_korea:
+                    if "include_entity" in sig.parameters:
+                        params["include_entity"] = "Korea, Rep."
+                    if "entities" in sig.parameters:
+                        ents = params.get("entities") or []
+                        if isinstance(ents, str):
+                            ents = [ents]
+                        if "Korea, Rep." not in ents:
+                            ents = ["Korea, Rep."] + [e for e in ents if e != "Korea, Rep."]
+                        params["entities"] = ents
+                    if "target_country" in sig.parameters:
+                        params["target_country"] = "Korea, Rep."
+                    if "target_entity" in sig.parameters:
+                        params["target_entity"] = "Korea, Rep."
+
                 # base_period 안전 보정 (해당 파라미터를 받는 함수에만 적용)
                 if "base_period" in sig.parameters and not params.get("base_period") and not params.get("period"):
                     params["base_period"] = diagnosis.get("recommended_year", "2024")
