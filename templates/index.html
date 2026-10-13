@@ -14,7 +14,12 @@
         <header class="header">
             <div class="header-title-row">
                 <h1>📊 AI Data Insight Builder</h1>
-                <span id="server-status" class="badge badge-success">서버 연결 중...</span>
+                <div class="header-actions">
+                    <button id="btn-save-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 및 분석 결과를 HTML 파일로 저장">💾 화면 저장</button>
+                    <button id="btn-print-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 인쇄 또는 PDF로 저장">🖨️ 인쇄 / PDF</button>
+                    <button id="btn-copy-link" class="btn btn-sm btn-outline header-btn" title="웹페이지 링크 복사">🔗 링크 복사</button>
+                    <span id="server-status" class="badge badge-success">서버 연결 중...</span>
+                </div>
             </div>
             <p class="subtitle">공공데이터 CSV를 업로드하면, Pandas가 오차 없이 계산하고 Gemini가 7대 원칙 보고서를 작성합니다.</p>
             <div class="notice-bar">
@@ -290,6 +295,9 @@
             </div>
         </section>
     </div>
+
+    <!-- 토스트 알림 메시지 컴포넌트 -->
+    <div id="toast" class="toast hidden"></div>
 
     <!-- 스크립트 연결 -->
     <script src="/static/app.js"></script>

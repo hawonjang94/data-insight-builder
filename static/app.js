@@ -833,10 +833,114 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================================
+    // 10. 상단 유틸리티 (화면 저장, 인쇄/PDF, 링크 복사, 토스트)
+    // ==========================================================
+    const btnSaveScreen = document.getElementById("btn-save-screen");
+    const btnPrintScreen = document.getElementById("btn-print-screen");
+    const btnCopyLink = document.getElementById("btn-copy-link");
+    const toastEl = document.getElementById("toast");
+
+    let toastTimer = null;
+    function showToast(message) {
+        if (!toastEl) return;
+        toastEl.textContent = message;
+        toastEl.classList.remove("hidden");
+        void toastEl.offsetWidth; // reflow
+        toastEl.classList.add("show");
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toastEl.classList.remove("show");
+            setTimeout(() => toastEl.classList.add("hidden"), 260);
+        }, 2800);
+    }
+
+    if (btnSaveScreen) {
+        btnSaveScreen.addEventListener("click", () => {
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const filename = `AI_Data_Insight_${timeStr}.html`;
+
+            // Canvas 차트를 영구 보존용 Base64 이미지로 변환하여 복제본에 인라인 삽입
+            const docClone = document.documentElement.cloneNode(true);
+            const canvasList = document.querySelectorAll("canvas");
+            const cloneCanvasList = docClone.querySelectorAll("canvas");
+
+            canvasList.forEach((origCanvas, idx) => {
+                try {
+                    const dataUrl = origCanvas.toDataURL("image/png");
+                    const img = docClone.createElement("img");
+                    img.src = dataUrl;
+                    img.style.maxWidth = "100%";
+                    img.style.height = "auto";
+                    img.alt = "Exported Chart";
+                    if (cloneCanvasList[idx]) {
+                        cloneCanvasList[idx].parentNode.replaceChild(img, cloneCanvasList[idx]);
+                    }
+                } catch (e) {
+                    console.warn("Canvas export fallback:", e);
+                }
+            });
+
+            // 스크립트 태그 제거하여 가벼운 정적 아카이브로 다운로드
+            docClone.querySelectorAll("script").forEach(s => s.remove());
+
+            const htmlContent = "<!DOCTYPE html>\n" + docClone.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("💾 현재 분석 화면 및 차트가 HTML 파일로 저장되었습니다!");
+        });
+    }
+
+    if (btnPrintScreen) {
+        btnPrintScreen.addEventListener("click", () => {
+            showToast("🖨️ 인쇄 대화상자를 호출합니다 (PDF로 저장 가능)...");
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        });
+    }
+
+    if (btnCopyLink) {
+        btnCopyLink.addEventListener("click", async () => {
+            const url = window.location.href;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const temp = document.createElement("input");
+                    temp.value = url;
+                    document.body.appendChild(temp);
+                    temp.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(temp);
+                }
+                showToast("🔗 링크가 클립보드에 복사되었습니다!");
+            } catch (err) {
+                showToast(`링크 복사: ${url}`);
+            }
+        });
+    }
+
+    // ==========================================================
+    // 11. 마크다운 렌더러 (형광펜 강조 ==단어== 및 태그 지원)
+    // ==========================================================
     function formatMarkdown(text) {
         if (!text) return "";
         let html = text
             .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            // 형광펜 하이라이트 문법 변환
+            .replace(/==(.*?)==/g, '<mark class="highlight-pen">$1</mark>')
+            .replace(/&lt;mark&gt;(.*?)&lt;\/mark&gt;/gi, '<mark class="highlight-pen">$1</mark>')
             .replace(/^## (.*$)/gim, "<h2>$1</h2>")
             .replace(/^### (.*$)/gim, "<h3>$1</h3>")
             .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
