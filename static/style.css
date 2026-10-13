@@ -725,6 +725,25 @@ tr:hover { background-color: #f1f5f9; }
     gap: 15px;
 }
 
+.nl-empty-notice {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin-top: 14px;
+    color: #991b1b;
+}
+
+.nl-empty-notice p {
+    margin-bottom: 4px;
+}
+
+.nl-empty-notice .text-muted {
+    color: #7f1d1d;
+    font-size: 0.88rem;
+}
+
 /* 8. Header Actions (Save, Print, Link) */
 .header-actions {
     display: flex;

@@ -673,6 +673,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const nlSyncBanner = document.getElementById("nl-sync-banner");
     const btnNlGoReport = document.getElementById("btn-nl-go-report");
 
+    let nlChartInstance = null; // Chart.js 인스턴스 전용 참조 변수 (window 네임스페이스 오염 방지)
+
     // 추천 질문 칩 클릭 바인딩
     document.querySelectorAll(".nl-chip-btn").forEach(chip => {
         chip.addEventListener("click", () => {
@@ -711,7 +713,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!res.ok) {
                 const errData = await res.json();
-                throw new Error(errData.error || "질의 분석 처리에 실패했습니다.");
+                throw new Error(errData.error || "해당 데이터가 존재하지 않거나 처리할 수 없습니다.");
             }
 
             const data = await res.json();
@@ -739,19 +741,37 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // 2. 진지하고 분석적인 답변 렌더링
-            nlAnswerContent.innerHTML = formatMarkdown(data.explanation);
+            nlAnswerContent.innerHTML = formatMarkdown(data.explanation || "");
 
-            // 3. 맞춤 차트 시각화
-            if (data.has_chart && data.chart_data && data.chart_data.labels && data.chart_data.labels.length > 0) {
+            // 3. 맞춤 차트 시각화 (데이터가 있는 경우에만 차트 렌더링)
+            if (data.has_chart && data.chart_data && Array.isArray(data.chart_data.labels) && data.chart_data.labels.length > 0) {
                 nlChartWrapper.classList.remove("hidden");
                 renderNlQueryChart(data.chart_data);
             } else {
                 nlChartWrapper.classList.add("hidden");
+                // 도구 실행을 시도했으나 데이터가 비어있는 경우
+                if (data.intent === "run_tool" && (!data.chart_data || !data.chart_data.labels || data.chart_data.labels.length === 0)) {
+                    nlAnswerContent.innerHTML += `
+                        <div class="nl-empty-notice">
+                            <p>⚠️ <strong>해당 데이터가 존재하지 않습니다.</strong></p>
+                            <p class="text-muted">요청하신 조건(국가명, 기준 연도 등)에 해당하는 수치가 데이터셋에 존재하지 않거나 결측치로 인해 시각화할 수 없습니다.</p>
+                        </div>`;
+                }
             }
 
         } catch (err) {
             console.error("[ERROR] NL 질의 처리 실패:", err);
-            nlAnswerContent.innerHTML = `<p style="color:var(--warning-text);"><strong>오류 발생:</strong> ${err.message}</p>`;
+            nlChartWrapper.classList.add("hidden");
+            nlOutputBox.classList.remove("hidden");
+            nlOutputBadge.className = "badge badge-warning";
+            nlOutputBadge.textContent = "데이터 조회 불가";
+
+            // 친절하고 직관적인 '해당 데이터가 존재하지 않습니다' 안내 박스 렌더링
+            nlAnswerContent.innerHTML = `
+                <div class="nl-empty-notice">
+                    <p>⚠️ <strong>해당 데이터가 존재하지 않습니다.</strong></p>
+                    <p class="text-muted">요청하신 조건(국가명, 기준 연도, 지표 등)을 데이터셋에서 찾을 수 없습니다. 질문 내용이나 기준 연도를 다시 확인해 주시기 바랍니다.</p>
+                </div>`;
         } finally {
             btnNlQuerySend.disabled = false;
             btnNlQuerySend.textContent = "질의 및 시각화 실행";
@@ -759,12 +779,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderNlQueryChart(chartData) {
-        if (window.nlQueryChart) {
-            window.nlQueryChart.destroy();
-            window.nlQueryChart = null;
+        const canvasEl = document.getElementById("nlQueryChart");
+        if (!canvasEl) return;
+
+        // 기존 차트가 있으면 안전하게 파기 (Chart.getChart 또는 nlChartInstance)
+        const existingChart = typeof Chart.getChart === "function" ? Chart.getChart(canvasEl) : null;
+        if (existingChart) {
+            existingChart.destroy();
+        } else if (nlChartInstance && typeof nlChartInstance.destroy === "function") {
+            nlChartInstance.destroy();
+        }
+        nlChartInstance = null;
+
+        if (!chartData || !Array.isArray(chartData.labels) || chartData.labels.length === 0) {
+            nlChartWrapper.classList.add("hidden");
+            return;
         }
 
-        const ctx = document.getElementById("nlQueryChart").getContext("2d");
+        const ctx = canvasEl.getContext("2d");
         const chartType = (chartData.type || "bar").toLowerCase();
 
         // 색상 팔레트
@@ -792,7 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
             tension: 0.25
         }));
 
-        window.nlQueryChart = new Chart(ctx, {
+        nlChartInstance = new Chart(ctx, {
             type: chartType,
             data: {
                 labels: chartData.labels || [],
