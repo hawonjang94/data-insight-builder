@@ -456,6 +456,93 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ==========================================================
+    // 차트 공통 유틸리티 (수치 라벨 플러그인 & 상위권 축 스케일 자동 보정)
+    // ==========================================================
+    const valueLabelPlugin = {
+        id: "valueLabelPlugin",
+        afterDatasetsDraw(chart) {
+            if (chart.config.type !== "bar") return;
+            const ctx = chart.ctx;
+            const isHorizontal = chart.options.indexAxis === "y";
+            const koreaRegex = /korea|대한민국|한국|남한/i;
+
+            chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (meta.hidden) return;
+
+                meta.data.forEach((element, index) => {
+                    const rawVal = dataset.data[index];
+                    if (rawVal === undefined || rawVal === null) return;
+                    const formatted = typeof rawVal === "number" ? rawVal.toFixed(2) + "%" : String(rawVal);
+                    const label = chart.data.labels[index] || "";
+                    const isKorea = koreaRegex.test(String(label));
+
+                    ctx.save();
+                    ctx.font = isKorea ? "bold 12px Pretendard, sans-serif" : "600 11px Pretendard, sans-serif";
+                    ctx.fillStyle = isKorea ? "#dc2626" : "#475569";
+
+                    if (isHorizontal) {
+                        const x = element.x + 8;
+                        const y = element.y;
+                        ctx.textAlign = "left";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(formatted, x, y);
+                    } else {
+                        const x = element.x;
+                        const y = element.y - 8;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "bottom";
+                        ctx.fillText(formatted, x, y);
+                    }
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    function calculateScaleLimits(datasets, isBar) {
+        if (!isBar) return { min: undefined, max: undefined, isAdjusted: false };
+
+        const vals = [];
+        (datasets || []).forEach(ds => {
+            (ds.data || []).forEach(v => {
+                const num = typeof v === "number" ? v : (v && typeof v.y === "number" ? v.y : (v && typeof v.x === "number" ? v.x : null));
+                if (num !== null && !isNaN(num)) vals.push(num);
+            });
+        });
+
+        if (vals.length === 0) return { min: 0, max: 100, isAdjusted: false };
+
+        const minVal = Math.min(...vals);
+        const maxVal = Math.max(...vals);
+        const span = maxVal - minVal;
+
+        // 상위권 데이터처럼 수치들이 50% 이상 상단에 몰려있고 편차가 작은 경우 (예: 91.8% ~ 100.0%)
+        // 0부터 시작하면 막대 길이가 모두 100%처럼 같아 보이므로, 차이가 눈에 보이도록 기준 축을 동적으로 설정
+        if (minVal >= 50 && span <= 35 && minVal > 0) {
+            const margin = Math.max(span * 0.45, 2.0);
+            let rawMin = Math.floor(minVal - margin);
+            let niceMin = Math.floor(rawMin / 5) * 5;
+            if (niceMin >= minVal) niceMin = Math.max(0, niceMin - 5);
+            if (niceMin < 0) niceMin = 0;
+
+            const niceMax = maxVal <= 100 ? 100 : Math.ceil(maxVal * 1.05);
+
+            return {
+                min: niceMin,
+                max: niceMax,
+                isAdjusted: niceMin > 0
+            };
+        }
+
+        return {
+            min: 0,
+            max: maxVal <= 100 && maxVal > 80 ? 100 : undefined,
+            isAdjusted: false
+        };
+    }
+
     function renderChart(chartData) {
         const ctx = document.getElementById("insightChart").getContext("2d");
 
@@ -471,25 +558,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("chart-wrapper").classList.remove("hidden");
 
+        const rawType = (chartData.type || "bar").toLowerCase();
+        const isBar = rawType === "bar";
+        const isHorizontal = isBar; // 사용자의 요청에 따라 막대 차트는 가로 막대로 통일
+        const koreaRegex = /korea|대한민국|한국|남한/i;
+
+        // 컨테이너 높이 동적 조절 (가로 막대 항목이 많을 때 겹침 방지)
+        const chartWrapper = document.getElementById("chart-wrapper");
+        if (chartWrapper && isHorizontal) {
+            const labelCount = (chartData.labels || []).length;
+            const targetH = Math.max(380, labelCount * 38 + 70);
+            chartWrapper.style.height = `${targetH}px`;
+        }
+
+        const scaleLimits = calculateScaleLimits(chartData.datasets, isBar);
+
         chartInstance = new Chart(ctx, {
-            type: chartData.type || "bar",
+            type: rawType,
             data: {
                 labels: chartData.labels || [],
                 datasets: chartData.datasets || []
             },
+            plugins: [valueLabelPlugin],
             options: {
+                indexAxis: isHorizontal ? "y" : "x",
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true, position: "top" }
+                layout: {
+                    padding: {
+                        right: isHorizontal ? 65 : 15,
+                        top: 10,
+                        bottom: 10
+                    }
                 },
-                scales: chartData.type === "scatter" ? {
-                    x: { type: "linear", position: "bottom" }
-                } : {}
+                plugins: {
+                    legend: { display: (chartData.datasets || []).length > 1, position: "top" },
+                    title: {
+                        display: !!chartData.title,
+                        text: chartData.title || "",
+                        font: { size: 15, weight: "bold" },
+                        padding: { top: 10, bottom: 8 }
+                    },
+                    subtitle: {
+                        display: scaleLimits.isAdjusted,
+                        text: `※ 국가 간 미세한 수치 격차를 비교할 수 있도록 기준 축을 ${scaleLimits.min}%부터 확대 표시합니다.`,
+                        font: { size: 12, style: "italic" },
+                        color: "#64748b",
+                        padding: { bottom: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = isHorizontal ? context.parsed.x : context.parsed.y;
+                                return ` ${context.dataset.label || ''}: ${val !== null && val !== undefined ? Number(val).toFixed(2) + '%' : '데이터 없음'}`;
+                            }
+                        }
+                    }
+                },
+                scales: isBar ? {
+                    x: {
+                        min: scaleLimits.min,
+                        max: scaleLimits.max,
+                        grid: { color: "#f1f5f9" },
+                        ticks: {
+                            callback: v => v + "%",
+                            font: { size: 11, weight: "500" }
+                        },
+                        title: {
+                            display: true,
+                            text: "인터넷 이용률 (%)",
+                            font: { size: 12, weight: "bold" },
+                            color: "#64748b"
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: {
+                            font: function(context) {
+                                const label = context.chart.data.labels[context.index] || "";
+                                const isKorea = koreaRegex.test(String(label));
+                                return { size: isKorea ? 13 : 12, weight: isKorea ? "bold" : "normal" };
+                            },
+                            color: function(context) {
+                                const label = context.chart.data.labels[context.index] || "";
+                                const isKorea = koreaRegex.test(String(label));
+                                return isKorea ? "#dc2626" : "#334155";
+                            }
+                        }
+                    }
+                } : (rawType === "scatter" ? { x: { type: "linear", position: "bottom" } } : {})
             }
         });
 
-        console.log(`[CHART] 차트 렌더 완료 (타입: ${chartData.type || "bar"})`);
+        console.log(`[CHART] 차트 렌더 완료 (타입: ${rawType}, 가로막대: ${isHorizontal})`);
     }
 
     function renderResultTable(resultObj) {
@@ -798,7 +959,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const ctx = canvasEl.getContext("2d");
         const chartType = (chartData.type || "bar").toLowerCase();
+        const isBar = chartType === "bar";
+        const isHorizontal = isBar; // 가로 막대 차트로 변경
         const koreaRegex = /korea|대한민국|한국|남한/i;
+
+        // 컨테이너 높이 동적 조절 (가로 막대 겹침 방지 및 넉넉한 공간 확보)
+        const containerEl = canvasEl.parentElement;
+        if (containerEl && isHorizontal) {
+            const labelCount = (chartData.labels || []).length;
+            const targetH = Math.max(380, labelCount * 42 + 70);
+            containerEl.style.height = `${targetH}px`;
+        }
 
         // 대한민국만 눈에 띄는 빨간색, 다른 모든 국가는 통일된 차분한 색상 적용
         const datasets = (chartData.datasets || []).map((ds, idx) => {
@@ -819,7 +990,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 // 막대 차트: labels 중 대한민국 위치 검사
                 const labels = chartData.labels || [];
-                const bgColors = labels.map(lbl => koreaRegex.test(String(lbl)) ? "rgba(239, 68, 68, 0.85)" : "rgba(59, 130, 246, 0.65)");
+                const bgColors = labels.map(lbl => koreaRegex.test(String(lbl)) ? "rgba(239, 68, 68, 0.88)" : "rgba(59, 130, 246, 0.65)");
                 const borderColors = labels.map(lbl => koreaRegex.test(String(lbl)) ? "rgba(239, 68, 68, 1)" : "rgba(59, 130, 246, 0.95)");
 
                 return {
@@ -832,27 +1003,45 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        const scaleLimits = calculateScaleLimits(datasets, isBar);
+
         nlChartInstance = new Chart(ctx, {
             type: chartType,
             data: {
                 labels: chartData.labels || [],
                 datasets: datasets
             },
+            plugins: [valueLabelPlugin],
             options: {
+                indexAxis: isHorizontal ? "y" : "x",
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        right: isHorizontal ? 65 : 15,
+                        top: 10,
+                        bottom: 10
+                    }
+                },
                 plugins: {
                     title: {
                         display: !!chartData.title,
                         text: chartData.title || "",
                         font: { size: 15, weight: "bold" },
-                        padding: { top: 10, bottom: 15 }
+                        padding: { top: 10, bottom: 6 }
+                    },
+                    subtitle: {
+                        display: scaleLimits.isAdjusted,
+                        text: `※ 상위권 국가 간 수치 격차(길이/높낮이)를 명확히 비교할 수 있도록 기준 축을 ${scaleLimits.min}%부터 확대 표시합니다.`,
+                        font: { size: 12, style: "italic" },
+                        color: "#64748b",
+                        padding: { bottom: 12 }
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
-                                return ` ${context.dataset.label || ''}: ${val !== null ? Number(val).toFixed(2) + '%' : '데이터 없음'}`;
+                                const val = isHorizontal ? context.parsed.x : context.parsed.y;
+                                return ` ${context.dataset.label || ''}: ${val !== null && val !== undefined ? Number(val).toFixed(2) + '%' : '데이터 없음'}`;
                             }
                         }
                     },
@@ -860,15 +1049,49 @@ document.addEventListener("DOMContentLoaded", () => {
                         display: datasets.length > 1 || chartType === "line"
                     }
                 },
-                scales: chartType !== "pie" && chartType !== "doughnut" ? {
+                scales: isBar ? {
+                    x: {
+                        min: scaleLimits.min,
+                        max: scaleLimits.max,
+                        grid: { color: "#f1f5f9" },
+                        ticks: {
+                            callback: v => v + "%",
+                            font: { size: 11, weight: "500" }
+                        },
+                        title: {
+                            display: true,
+                            text: "인터넷 이용률 (%)",
+                            font: { size: 12, weight: "bold" },
+                            color: "#64748b"
+                        }
+                    },
                     y: {
-                        beginAtZero: true,
-                        grid: { color: "#f1f5f9" }
+                        grid: { display: false },
+                        ticks: {
+                            font: function(context) {
+                                const label = context.chart.data.labels[context.index] || "";
+                                const isKorea = koreaRegex.test(String(label));
+                                return { size: isKorea ? 13 : 12, weight: isKorea ? "bold" : "normal" };
+                            },
+                            color: function(context) {
+                                const label = context.chart.data.labels[context.index] || "";
+                                const isKorea = koreaRegex.test(String(label));
+                                return isKorea ? "#dc2626" : "#334155";
+                            }
+                        }
+                    }
+                } : (chartType !== "pie" && chartType !== "doughnut" ? {
+                    y: {
+                        beginAtZero: false,
+                        min: scaleLimits.min,
+                        max: scaleLimits.max,
+                        grid: { color: "#f1f5f9" },
+                        ticks: { callback: v => v + "%" }
                     },
                     x: {
                         grid: { color: "#f8fafc" }
                     }
-                } : {}
+                } : {})
             }
         });
     }

@@ -581,6 +581,7 @@ def top_bottom_n(df, base_period=None, n=10, mode="top", exclude_aggregates=True
         "result": {"mode": mode, "ranking": rank_list},
         "chart_data": {
             "type": "bar",
+            "indexAxis": "y",
             "labels": labels,
             "datasets": [{
                 "label": f"{target_col}년 인터넷 이용률 (%)",
