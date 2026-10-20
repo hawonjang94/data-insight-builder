@@ -162,6 +162,9 @@ def diagnose_dataframe(df):
     }
 
 
+APP_PIN = os.environ.get("APP_PIN", "0514")
+
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
@@ -174,6 +177,19 @@ def health():
         "message": "Data Insight Builder server is running",
         "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     }), 200
+
+
+@app.route("/verify_pin", methods=["POST"])
+def verify_pin():
+    """앱 접속 4자리 PIN 인증 엔드포인트 (기본값: 0514)"""
+    data = request.get_json(silent=True) or {}
+    entered_pin = str(data.get("pin", "")).strip()
+    if entered_pin == APP_PIN:
+        print(f"[Auth] PIN 인증 성공 (입력: {entered_pin})")
+        return jsonify({"status": "success", "message": "인증에 성공했습니다."}), 200
+    else:
+        print(f"[Auth Warning] PIN 인증 실패 (입력: {entered_pin})")
+        return jsonify({"status": "error", "message": "비밀번호가 올바르지 않습니다."}), 401
 
 
 @app.route("/inspect", methods=["POST"])

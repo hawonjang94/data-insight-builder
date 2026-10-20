@@ -1216,9 +1216,195 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/^### (.*$)/gim, "<h3>$1</h3>")
             .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
             .replace(/^\* (.*$)/gim, "<li>$1</li>")
-            .replace(/^- (.*$)/gim, "<li>$1</li>")
             .replace(/(<li>.*<\/li>)/gis, "<ul>$1</ul>")
             .replace(/\n\n/g, "<br><br>");
         return html;
     }
+
+    // ==========================================================
+    // 12. 4자리 보안 PIN 잠금 관리 (기본값: 0514)
+    // ==========================================================
+    const pinModal = document.getElementById("pin-lock-modal");
+    const pinInputs = document.querySelectorAll(".pin-digit");
+    const pinErrorMsg = document.getElementById("pin-error-msg");
+    const btnSubmitPin = document.getElementById("btn-submit-pin");
+    const btnLockApp = document.getElementById("btn-lock-app");
+    const pinCard = document.querySelector(".pin-card");
+
+    const AUTH_SESSION_KEY = "app_pin_authenticated";
+
+    // 현재 세션 인증 상태 확인
+    function checkPinAuthStatus() {
+        if (!pinModal) return;
+        const isAuth = sessionStorage.getItem(AUTH_SESSION_KEY) === "true";
+        if (isAuth) {
+            pinModal.classList.add("unlocked");
+        } else {
+            pinModal.classList.remove("unlocked");
+            resetPinInputs();
+        }
+    }
+
+    function resetPinInputs() {
+        pinInputs.forEach(input => {
+            input.value = "";
+            input.classList.remove("filled");
+        });
+        if (pinErrorMsg) pinErrorMsg.classList.add("hidden");
+        if (pinInputs.length > 0) {
+            setTimeout(() => pinInputs[0].focus(), 150);
+        }
+    }
+
+    function getEnteredPin() {
+        let pin = "";
+        pinInputs.forEach(inp => pin += inp.value);
+        return pin;
+    }
+
+    async function verifyAndUnlockPin() {
+        const pin = getEnteredPin();
+        if (pin.length < 4) {
+            showPinError("4자리 비밀번호를 모두 입력해 주세요.");
+            return;
+        }
+
+        if (btnSubmitPin) {
+            btnSubmitPin.disabled = true;
+            btnSubmitPin.textContent = "인증 중...";
+        }
+
+        try {
+            const res = await fetch("/verify_pin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: pin })
+            });
+
+            if (res.ok) {
+                // 인증 성공
+                sessionStorage.setItem(AUTH_SESSION_KEY, "true");
+                if (pinErrorMsg) pinErrorMsg.classList.add("hidden");
+                showToast("🔓 보안 인증이 완료되었습니다.");
+                pinModal.classList.add("unlocked");
+            } else {
+                // 인증 실패
+                showPinError("비밀번호가 일치하지 않습니다. 다시 입력해 주세요.");
+            }
+        } catch (err) {
+            // 오프라인/네트워크 fallback (0514 검증)
+            if (pin === "0514") {
+                sessionStorage.setItem(AUTH_SESSION_KEY, "true");
+                showToast("🔓 보안 인증이 완료되었습니다.");
+                pinModal.classList.add("unlocked");
+            } else {
+                showPinError("비밀번호가 일치하지 않습니다. 다시 입력해 주세요.");
+            }
+        } finally {
+            if (btnSubmitPin) {
+                btnSubmitPin.disabled = false;
+                btnSubmitPin.textContent = "인증 및 잠금 해제";
+            }
+        }
+    }
+
+    function showPinError(msg) {
+        if (pinErrorMsg) {
+            pinErrorMsg.textContent = `⚠️ ${msg}`;
+            pinErrorMsg.classList.remove("hidden");
+        }
+        if (pinCard) {
+            pinCard.classList.remove("shake");
+            void pinCard.offsetWidth; // reflow
+            pinCard.classList.add("shake");
+        }
+        pinInputs.forEach(inp => {
+            inp.value = "";
+            inp.classList.remove("filled");
+        });
+        if (pinInputs.length > 0) pinInputs[0].focus();
+    }
+
+    // 키보드 입력 및 자동 포커스 이동 처리
+    pinInputs.forEach((input, idx) => {
+        input.addEventListener("input", (e) => {
+            const val = e.target.value.replace(/[^0-9]/g, "");
+            e.target.value = val ? val[0] : "";
+
+            if (e.target.value) {
+                e.target.classList.add("filled");
+                if (idx < pinInputs.length - 1) {
+                    pinInputs[idx + 1].focus();
+                } else {
+                    // 4자리 모두 입력 시 자동 검증 실행
+                    verifyAndUnlockPin();
+                }
+            } else {
+                e.target.classList.remove("filled");
+            }
+        });
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" && !e.target.value && idx > 0) {
+                pinInputs[idx - 1].focus();
+            } else if (e.key === "Enter") {
+                verifyAndUnlockPin();
+            }
+        });
+    });
+
+    // 화면 가상 키패드 버튼 클릭 이벤트
+    document.querySelectorAll(".pin-key").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const key = btn.getAttribute("data-key");
+
+            if (key === "clear") {
+                resetPinInputs();
+                return;
+            }
+
+            if (key === "backspace") {
+                for (let i = pinInputs.length - 1; i >= 0; i--) {
+                    if (pinInputs[i].value) {
+                        pinInputs[i].value = "";
+                        pinInputs[i].classList.remove("filled");
+                        pinInputs[i].focus();
+                        break;
+                    }
+                }
+                return;
+            }
+
+            // 숫자 키 입력
+            for (let i = 0; i < pinInputs.length; i++) {
+                if (!pinInputs[i].value) {
+                    pinInputs[i].value = key;
+                    pinInputs[i].classList.add("filled");
+                    if (i < pinInputs.length - 1) {
+                        pinInputs[i + 1].focus();
+                    } else {
+                        // 4자리 완성 시 자동 검증
+                        verifyAndUnlockPin();
+                    }
+                    break;
+                }
+            }
+        });
+    });
+
+    if (btnSubmitPin) {
+        btnSubmitPin.addEventListener("click", verifyAndUnlockPin);
+    }
+
+    // 상단 '🔒 잠금' 버튼 클릭 시 즉시 화면 잠금
+    if (btnLockApp) {
+        btnLockApp.addEventListener("click", () => {
+            sessionStorage.removeItem(AUTH_SESSION_KEY);
+            checkPinAuthStatus();
+            showToast("🔒 앱이 잠겼습니다.");
+        });
+    }
+
+    // 초기 로딩 시 인증 상태 체크
+    checkPinAuthStatus();
 });

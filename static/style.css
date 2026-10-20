@@ -870,4 +870,176 @@ mark, .highlight-pen {
 /* Utility */
 .hidden { display: none !important; }
 
+/* ==========================================================
+   11. 4자리 PIN 보안 잠금 화면 (PIN: 0514)
+   ========================================================== */
+.pin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.pin-modal-overlay.unlocked {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.pin-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 34px 28px;
+    width: 100%;
+    max-width: 370px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8);
+    text-align: center;
+    transform: translateY(0);
+    transition: transform 0.25s ease;
+}
+
+.pin-card.shake {
+    animation: pin-shake 0.45s ease-in-out;
+}
+
+@keyframes pin-shake {
+    0%, 100% { transform: translateX(0); }
+    15%, 45%, 75% { transform: translateX(-10px); }
+    30%, 60%, 90% { transform: translateX(10px); }
+}
+
+.pin-icon-wrap {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 14px;
+    background: #eff6ff;
+    border: 2px solid #bfdbfe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pin-icon {
+    font-size: 28px;
+}
+
+.pin-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.pin-desc {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 22px;
+    line-height: 1.45;
+}
+
+.pin-digits-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.pin-digit {
+    width: 50px;
+    height: 58px;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: all 0.15s ease;
+    outline: none;
+    caret-color: #3b82f6;
+}
+
+.pin-digit:focus {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+    transform: translateY(-2px);
+}
+
+.pin-digit.filled {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.pin-error-msg {
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.pin-key {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    user-select: none;
+}
+
+.pin-key:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.pin-key:active {
+    background: #cbd5e1;
+    transform: scale(0.96);
+}
+
+.pin-key-clear, .pin-key-backspace {
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+.pin-submit-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.pin-hint-text {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
 
