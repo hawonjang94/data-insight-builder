@@ -7,6 +7,16 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/style.css">
+
+    <!-- PWA & Mobile Web Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Data Insight">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
     <div class="container">
@@ -15,6 +25,7 @@
             <div class="header-title-row">
                 <h1>📊 AI Data Insight Builder</h1>
                 <div class="header-actions">
+                    <button id="btn-install-pwa" class="btn btn-sm btn-outline header-btn hidden" title="홈 화면에 PWA 앱 설치">📲 앱 설치</button>
                     <button id="btn-save-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 및 분석 결과를 HTML 파일로 저장">💾 화면 저장</button>
                     <button id="btn-print-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 인쇄 또는 PDF로 저장">🖨️ 인쇄 / PDF</button>
                     <button id="btn-copy-link" class="btn btn-sm btn-outline header-btn" title="웹페이지 링크 복사">🔗 링크 복사</button>

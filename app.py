@@ -4,7 +4,7 @@ import json
 import os
 import re
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_from_directory
 import pandas as pd
 
 # 환경변수 로드 (.env)
@@ -177,6 +177,27 @@ def health():
         "message": "Data Insight Builder server is running",
         "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     }), 200
+
+
+@app.route("/manifest.json", methods=["GET"])
+def manifest():
+    """PWA 매니페스트 제공"""
+    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+
+
+@app.route("/service-worker.js", methods=["GET"])
+def service_worker():
+    """PWA 서비스 워커 제공 (루트 스코프 적용)"""
+    resp = send_from_directory("static", "service-worker.js", mimetype="application/javascript")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.route("/favicon.ico", methods=["GET"])
+def favicon():
+    """파비콘 제공"""
+    return send_from_directory("static/icons", "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
 
 @app.route("/verify_pin", methods=["POST"])
