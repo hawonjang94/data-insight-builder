@@ -1,7 +1,9 @@
-const CACHE_NAME = "data-insight-pwa-v1";
+const CACHE_NAME = "data-insight-pwa-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
+  "/static/style.css?v=20261020_navy",
+  "/static/app.js?v=20261020_navy",
   "/static/style.css",
   "/static/app.js",
   "/static/icons/icon-192.png",
