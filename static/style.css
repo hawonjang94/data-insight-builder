@@ -1688,6 +1688,147 @@ mark, .highlight-pen {
     .pwa-step-item p {
         font-size: 0.78rem !important;
     }
+
+    /* 9. 💬 5단계: AI 데이터 분석관 Q&A 박스 모바일 최적화 */
+    .section-qa {
+        padding: 12px 10px !important;
+    }
+
+    .sample-questions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 5px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .sample-title {
+        font-size: 0.76rem !important;
+        width: 100% !important;
+        margin-bottom: 2px !important;
+    }
+
+    .chip-btn {
+        padding: 5px 9px !important;
+        font-size: 0.74rem !important;
+        border-radius: 12px !important;
+        word-break: keep-all !important;
+        line-height: 1.35 !important;
+    }
+
+    .chat-messages-container {
+        padding: 10px 8px !important;
+        max-height: 320px !important;
+        gap: 10px !important;
+        border-radius: 10px !important;
+        margin-bottom: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .chat-bubble {
+        max-width: 96% !important;
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
+        font-size: 0.83rem !important;
+        line-height: 1.55 !important;
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+    }
+
+    .chat-bubble.chat-user {
+        max-width: 90% !important;
+    }
+
+    .chat-sender {
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        margin-bottom: 4px !important;
+    }
+
+    .chat-text {
+        font-size: 0.83rem !important;
+        line-height: 1.55 !important;
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+    }
+
+    .chat-text p {
+        margin-bottom: 6px !important;
+    }
+
+    .chat-text ul, .chat-text ol {
+        padding-left: 18px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .chat-text li {
+        margin-bottom: 3px !important;
+        font-size: 0.82rem !important;
+    }
+
+    .qa-input-bar {
+        gap: 6px !important;
+        width: 100% !important;
+    }
+
+    .qa-input {
+        padding: 9px 10px !important;
+        font-size: 0.82rem !important;
+        border-radius: 8px !important;
+    }
+
+    #btn-qa-send {
+        padding: 9px 12px !important;
+        font-size: 0.82rem !important;
+        border-radius: 8px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* 10. 2단계 자연어 질의 AI 분석관 박스 & 4단계 보고서 박스 모바일 최적화 */
+    .nl-input-bar {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+    }
+
+    .nl-query-input {
+        width: 100% !important;
+        padding: 9px 10px !important;
+        font-size: 0.82rem !important;
+        border-radius: 8px !important;
+    }
+
+    #btn-nl-query-send {
+        width: 100% !important;
+        padding: 9px 12px !important;
+        font-size: 0.84rem !important;
+        border-radius: 8px !important;
+    }
+
+    .nl-output-box {
+        padding: 12px 10px !important;
+        border-radius: 10px !important;
+        margin-top: 12px !important;
+    }
+
+    .nl-answer-content {
+        font-size: 0.84rem !important;
+        line-height: 1.55 !important;
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+    }
+
+    .report-box {
+        padding: 12px 10px !important;
+    }
+
+    .report-content {
+        font-size: 0.84rem !important;
+        line-height: 1.55 !important;
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+    }
 }
 
 
