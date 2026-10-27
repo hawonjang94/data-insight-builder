@@ -1408,20 +1408,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================================
     // 13. PWA (Progressive Web App) 서비스 워커 등록 및 설치 지원
     // ==========================================================
+    // 12. PWA 모바일 앱 다운로드 및 설치 관리
+    // ==========================================================
     let deferredInstallPrompt = null;
     const btnInstallPwa = document.getElementById("btn-install-pwa");
     const btnPinInstallPwa = document.getElementById("btn-pin-install-pwa");
     const mobilePwaBanner = document.getElementById("mobile-pwa-banner");
     const btnBannerInstall = document.getElementById("btn-banner-install");
     const btnBannerClose = document.getElementById("btn-banner-close");
-    const iosInstallModal = document.getElementById("ios-install-modal");
-    const btnIosModalClose = document.getElementById("btn-ios-modal-close");
-    const btnIosModalOk = document.getElementById("btn-ios-modal-ok");
+    
+    // PWA 가이드 모달 요소
+    const pwaInstallModal = document.getElementById("pwa-install-modal");
+    const btnPwaModalClose = document.getElementById("btn-pwa-modal-close");
+    const btnPwaModalOk = document.getElementById("btn-pwa-modal-ok");
+    const tabBtnAndroid = document.getElementById("tab-btn-android");
+    const tabBtnIos = document.getElementById("tab-btn-ios");
+    const guideTabAndroid = document.getElementById("guide-tab-android");
+    const guideTabIos = document.getElementById("guide-tab-ios");
 
-    // 이미 설치된 Standalone 모드인지 감지
+    // 기기 및 독립 실행(Standalone) 모드 감지
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || (window.innerWidth <= 768);
 
     // 서비스 워커 등록
     if ("serviceWorker" in navigator) {
@@ -1441,7 +1449,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnInstallPwa) btnInstallPwa.classList.remove("hidden");
         if (btnPinInstallPwa) btnPinInstallPwa.classList.remove("hidden");
         const dismissed = sessionStorage.getItem("pwa_banner_dismissed") === "true";
-        if (mobilePwaBanner && isMobile && !dismissed) {
+        if (mobilePwaBanner && !dismissed) {
             mobilePwaBanner.classList.remove("hidden");
         }
     }
@@ -1452,6 +1460,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mobilePwaBanner) mobilePwaBanner.classList.add("hidden");
     }
 
+    // 모바일 접속 시 즉시 다운로드 / 설치 UI 노출
+    if (isMobile && !isStandalone) {
+        showInstallUi();
+    }
+
     // Android/Chrome/Edge: beforeinstallprompt 이벤트 발생 시
     window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
@@ -1459,27 +1472,57 @@ document.addEventListener("DOMContentLoaded", () => {
         showInstallUi();
     });
 
-    // iOS Safari의 경우 beforeinstallprompt가 없으므로 모바일 감지 시 설치 UI 노출
-    if (isIos && !isStandalone) {
-        showInstallUi();
+    // 가이드 모달 탭 전환 함수
+    function switchGuideTab(target) {
+        if (!tabBtnAndroid || !tabBtnIos || !guideTabAndroid || !guideTabIos) return;
+        if (target === "ios") {
+            tabBtnIos.classList.add("active");
+            tabBtnAndroid.classList.remove("active");
+            guideTabIos.classList.remove("hidden");
+            guideTabAndroid.classList.add("hidden");
+        } else {
+            tabBtnAndroid.classList.add("active");
+            tabBtnIos.classList.remove("active");
+            guideTabAndroid.classList.remove("hidden");
+            guideTabIos.classList.add("hidden");
+        }
+    }
+
+    if (tabBtnAndroid) tabBtnAndroid.addEventListener("click", () => switchGuideTab("android"));
+    if (tabBtnIos) tabBtnIos.addEventListener("click", () => switchGuideTab("ios"));
+
+    // 가이드 모달 열기
+    function openInstallGuideModal() {
+        if (!pwaInstallModal) return;
+        switchGuideTab(isIos ? "ios" : "android");
+        pwaInstallModal.classList.remove("hidden");
+    }
+
+    function closeInstallGuideModal() {
+        if (pwaInstallModal) pwaInstallModal.classList.add("hidden");
     }
 
     // 설치 트리거 공통 함수
     async function triggerPwaInstall() {
         if (deferredInstallPrompt) {
-            deferredInstallPrompt.prompt();
-            const { outcome } = await deferredInstallPrompt.userChoice;
-            console.log("[PWA] 설치 선택 결과:", outcome);
-            deferredInstallPrompt = null;
-            hideInstallUi();
-        } else if (isIos) {
-            // iOS Safari 안내 모달 표시
-            if (iosInstallModal) {
-                iosInstallModal.classList.remove("hidden");
+            try {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                console.log("[PWA] 설치 선택 결과:", outcome);
+                if (outcome === "accepted") {
+                    deferredInstallPrompt = null;
+                    hideInstallUi();
+                }
+            } catch (err) {
+                console.warn("[PWA] Prompt 실행 실패, 가이드 모달 오픈:", err);
+                openInstallGuideModal();
             }
+        } else if (isMobile) {
+            // 설치 프롬프트가 지원되지 않거나 지연되는 모바일 환경: 안내 모달 오픈
+            openInstallGuideModal();
         } else {
-            // 기타 브라우저: 안내 토스트
-            showToast("💡 브라우저 주소창 우측의 '설치' 아이콘을 클릭하여 설치할 수 있습니다.");
+            // 데스크톱 Chrome/Edge
+            showToast("💡 브라우저 주소창 우측 상단의 '설치' 아이콘을 클릭하여 설치할 수 있습니다.");
         }
     }
 
@@ -1494,20 +1537,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (btnIosModalClose) {
-        btnIosModalClose.addEventListener("click", () => {
-            if (iosInstallModal) iosInstallModal.classList.add("hidden");
-        });
-    }
-    if (btnIosModalOk) {
-        btnIosModalOk.addEventListener("click", () => {
-            if (iosInstallModal) iosInstallModal.classList.add("hidden");
+    if (btnPwaModalClose) btnPwaModalClose.addEventListener("click", closeInstallGuideModal);
+    if (btnPwaModalOk) btnPwaModalOk.addEventListener("click", closeInstallGuideModal);
+    if (pwaInstallModal) {
+        pwaInstallModal.addEventListener("click", (e) => {
+            if (e.target === pwaInstallModal) closeInstallGuideModal();
         });
     }
 
     window.addEventListener("appinstalled", () => {
         console.log("[PWA] 앱 설치 완료됨");
         hideInstallUi();
+        closeInstallGuideModal();
         showToast("🎉 AI Data Insight Builder 앱이 설치되었습니다!");
     });
 

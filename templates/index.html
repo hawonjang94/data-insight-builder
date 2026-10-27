@@ -6,7 +6,7 @@
     <title>AI Data Insight Builder</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/style.css?v=20261020_navy">
+    <link rel="stylesheet" href="/static/style.css?v=20261027_pwa">
 
     <!-- PWA & Mobile Web Meta Tags -->
     <link rel="manifest" href="/manifest.json">
@@ -25,7 +25,7 @@
             <div class="header-title-row">
                 <h1>📊 AI Data Insight Builder</h1>
                 <div class="header-actions">
-                    <button id="btn-install-pwa" class="btn btn-sm btn-outline header-btn hidden" title="홈 화면에 PWA 앱 설치">📲 앱 설치</button>
+                    <button id="btn-install-pwa" class="btn btn-sm btn-primary header-btn header-install-btn hidden" title="홈 화면에 PWA 앱 다운로드 및 설치">📲 앱 다운로드</button>
                     <button id="btn-save-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 및 분석 결과를 HTML 파일로 저장">💾 화면 저장</button>
                     <button id="btn-print-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 인쇄 또는 PDF로 저장">🖨️ 인쇄 / PDF</button>
                     <button id="btn-copy-link" class="btn btn-sm btn-outline header-btn" title="웹페이지 링크 복사">🔗 링크 복사</button>
@@ -354,47 +354,75 @@
         </div>
     </div>
 
-    <!-- 📲 모바일 전용 플로팅 앱 설치 배너 -->
+    <!-- 📲 모바일 전용 플로팅 앱 다운로드 배너 -->
     <div id="mobile-pwa-banner" class="mobile-pwa-banner hidden">
         <div class="pwa-banner-content">
             <img src="/static/icons/icon-192.png" alt="App Icon" class="pwa-banner-icon">
             <div class="pwa-banner-text">
-                <strong>AI Data Insight Builder</strong>
-                <span>홈 화면에 앱으로 설치하여 더 빠르고 편리하게 사용하세요</span>
+                <span class="pwa-banner-title">AI Data Insight</span>
+                <span class="pwa-banner-desc">홈 화면 앱 다운로드 및 빠른 실행</span>
             </div>
         </div>
         <div class="pwa-banner-actions">
-            <button type="button" id="btn-banner-install" class="btn btn-sm btn-primary pwa-install-act-btn">앱 설치</button>
+            <button type="button" id="btn-banner-install" class="btn btn-sm btn-primary pwa-install-act-btn">📲 다운로드</button>
             <button type="button" id="btn-banner-close" class="pwa-close-act-btn" aria-label="닫기">✕</button>
         </div>
     </div>
 
-    <!-- 🍏 iOS Safari 전용 홈 화면 추가 안내 모달 -->
-    <div id="ios-install-modal" class="ios-modal-overlay hidden">
-        <div class="ios-modal-card">
-            <div class="ios-modal-header">
-                <h3>📲 아이폰 홈 화면에 앱 추가하기</h3>
-                <button type="button" id="btn-ios-modal-close" class="pwa-close-act-btn">✕</button>
+    <!-- 📲 모바일 앱 다운로드 & 설치 안내 모달 (Android / iOS 통합) -->
+    <div id="pwa-install-modal" class="pwa-modal-overlay hidden">
+        <div class="pwa-guide-modal-card">
+            <div class="pwa-modal-header">
+                <h3>📲 모바일 앱 설치 가이드</h3>
+                <button type="button" id="btn-pwa-modal-close" class="pwa-close-act-btn">✕</button>
             </div>
-            <div class="ios-steps">
-                <div class="ios-step-item">
-                    <span class="ios-step-num">1</span>
-                    <p>사파리(Safari) 브라우저 하단 중앙의 <strong>공유 버튼 <span class="ios-icon">⎋</span></strong>을 누릅니다.</p>
-                </div>
-                <div class="ios-step-item">
-                    <span class="ios-step-num">2</span>
-                    <p>공유 메뉴를 아래로 스크롤하여 <strong>'홈 화면에 추가 <span class="ios-icon">➕</span>'</strong>를 누릅니다.</p>
-                </div>
-                <div class="ios-step-item">
-                    <span class="ios-step-num">3</span>
-                    <p>우측 상단의 <strong>[추가]</strong>를 누르면 스마트폰에 단독 앱으로 설치됩니다!</p>
+            
+            <div class="pwa-guide-tabs">
+                <button type="button" id="tab-btn-android" class="pwa-tab-btn active">🤖 안드로이드</button>
+                <button type="button" id="tab-btn-ios" class="pwa-tab-btn">🍏 아이폰 (iOS)</button>
+            </div>
+
+            <!-- 안드로이드 가이드 -->
+            <div id="guide-tab-android" class="pwa-tab-content">
+                <div class="pwa-steps">
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">1</span>
+                        <p>브라우저(Chrome / 삼성인터넷) 메뉴 <strong class="highlight-text">더보기 <span class="pwa-badge-icon">⋮</span></strong>를 누릅니다.</p>
+                    </div>
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">2</span>
+                        <p>메뉴에서 <strong class="highlight-text">'앱 설치'</strong> 또는 <strong class="highlight-text">'홈 화면에 추가'</strong>를 누릅니다.</p>
+                    </div>
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">3</span>
+                        <p>바탕화면에 아이콘이 생성되어 바로가기 앱으로 편리하게 사용할 수 있습니다!</p>
+                    </div>
                 </div>
             </div>
-            <button type="button" id="btn-ios-modal-ok" class="btn btn-primary ios-confirm-btn">확인했습니다</button>
+
+            <!-- 아이폰 가이드 -->
+            <div id="guide-tab-ios" class="pwa-tab-content hidden">
+                <div class="pwa-steps">
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">1</span>
+                        <p>사파리(Safari) 브라우저 하단 중앙의 <strong class="highlight-text">공유 버튼 <span class="pwa-badge-icon">⎋</span></strong>을 누릅니다.</p>
+                    </div>
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">2</span>
+                        <p>공유 창을 아래로 내려 <strong class="highlight-text">'홈 화면에 추가 <span class="pwa-badge-icon">➕</span>'</strong>를 누릅니다.</p>
+                    </div>
+                    <div class="pwa-step-item">
+                        <span class="pwa-step-num">3</span>
+                        <p>우측 상단의 <strong class="highlight-text">[추가]</strong>를 누르면 스마트폰에 단독 앱으로 설치됩니다!</p>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="btn-pwa-modal-ok" class="btn btn-primary pwa-confirm-btn">확인했습니다</button>
         </div>
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="/static/app.js?v=20261020_navy2"></script>
+    <script src="/static/app.js?v=20261027_pwa"></script>
 </body>
 </html>

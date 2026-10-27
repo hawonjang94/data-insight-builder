@@ -1100,26 +1100,45 @@ mark, .highlight-pen {
 }
 
 /* ==========================================================
-   12. 모바일 PWA 플로팅 설치 배너 및 iOS 안내 모달
+   12. 모바일 PWA 다운로드 버튼 및 플로팅 배너
    ========================================================== */
+.header-install-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(147, 197, 253, 0.4) !important;
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.45) !important;
+    font-weight: 700 !important;
+    animation: pwa-pulse 2.2s infinite ease-in-out;
+}
+
+@keyframes pwa-pulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 18px rgba(96, 165, 250, 0.85);
+        transform: translateY(-1px);
+    }
+}
+
 .mobile-pwa-banner {
     position: fixed;
-    bottom: 20px;
-    left: 16px;
-    right: 16px;
-    max-width: 480px;
+    bottom: 14px;
+    left: 12px;
+    right: 12px;
+    max-width: 440px;
     margin: 0 auto;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1.5px solid rgba(96, 165, 250, 0.35);
-    border-radius: 20px;
-    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(96, 165, 250, 0.45);
+    border-radius: 16px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(37, 99, 235, 0.3);
+    gap: 10px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(37, 99, 235, 0.35);
     z-index: 99998;
     animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1132,15 +1151,15 @@ mark, .highlight-pen {
 .pwa-banner-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex: 1;
     min-width: 0;
 }
 
 .pwa-banner-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     flex-shrink: 0;
 }
@@ -1148,40 +1167,51 @@ mark, .highlight-pen {
 .pwa-banner-text {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-width: 0;
+    gap: 2px;
 }
 
-.pwa-banner-text strong {
+.pwa-banner-title {
     color: #ffffff;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.25;
 }
 
-.pwa-banner-text span {
+.pwa-banner-desc {
     color: #94a3b8;
-    font-size: 0.76rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 0.72rem;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.25;
 }
 
 .pwa-banner-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
 }
 
 .pwa-install-act-btn {
-    padding: 8px 14px !important;
-    font-size: 0.85rem !important;
+    padding: 7px 12px !important;
+    font-size: 0.82rem !important;
     font-weight: 700 !important;
     border-radius: 10px !important;
     background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(147, 197, 253, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
     white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pwa-install-act-btn:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    transform: translateY(-1px);
 }
 
 .pwa-close-act-btn {
@@ -1189,20 +1219,25 @@ mark, .highlight-pen {
     border: none;
     color: #94a3b8;
     font-size: 1.1rem;
-    padding: 6px;
+    padding: 4px;
     cursor: pointer;
     line-height: 1;
     border-radius: 50%;
     transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pwa-close-act-btn:hover {
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
 }
 
-/* iOS Safari 안내 모달 */
-.ios-modal-overlay {
+/* ==========================================================
+   13. 통합 모바일 PWA 설치 & 다운로드 가이드 모달
+   ========================================================== */
+.pwa-modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.85);
@@ -1212,86 +1247,368 @@ mark, .highlight-pen {
     align-items: center;
     justify-content: center;
     z-index: 9999999;
-    padding: 20px;
+    padding: 14px;
 }
 
-.ios-modal-card {
+.pwa-guide-modal-card {
     background: linear-gradient(165deg, #1e293b, #0f172a);
     border: 1.5px solid rgba(96, 165, 250, 0.35);
-    border-radius: 24px;
-    padding: 28px 24px;
+    border-radius: 20px;
+    padding: 22px 18px;
     width: 100%;
-    max-width: 380px;
+    max-width: 390px;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
     color: #f8fafc;
 }
 
-.ios-modal-header {
+.pwa-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
 
-.ios-modal-header h3 {
+.pwa-modal-header h3 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #ffffff;
+    word-break: keep-all;
 }
 
-.ios-steps {
+.pwa-guide-tabs {
+    display: flex;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.pwa-tab-btn {
+    flex: 1;
+    padding: 7px 6px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    word-break: keep-all;
+    text-align: center;
+}
+
+.pwa-tab-btn.active {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.pwa-steps {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin-bottom: 22px;
+    gap: 10px;
+    margin-bottom: 18px;
 }
 
-.ios-step-item {
+.pwa-step-item {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    background: rgba(30, 41, 59, 0.6);
+    gap: 10px;
+    background: rgba(30, 41, 59, 0.65);
     border: 1px solid rgba(148, 163, 184, 0.15);
-    border-radius: 14px;
-    padding: 12px 14px;
+    border-radius: 12px;
+    padding: 10px 12px;
 }
 
-.ios-step-num {
-    width: 24px;
-    height: 24px;
+.pwa-step-num {
+    width: 22px;
+    height: 22px;
     background: #2563eb;
     color: #ffffff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     flex-shrink: 0;
+    margin-top: 1px;
 }
 
-.ios-step-item p {
+.pwa-step-item p {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     color: #cbd5e1;
     line-height: 1.45;
+    word-break: keep-all;
 }
 
-.ios-icon {
+.highlight-text {
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+.pwa-badge-icon {
     display: inline-block;
     padding: 1px 5px;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
 }
 
-.ios-confirm-btn {
+.pwa-confirm-btn {
     width: 100%;
-    padding: 12px;
+    padding: 11px;
     border-radius: 12px;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+/* ==========================================================
+   14. 모바일 반응형 패딩 축소 & 글자 잘림 완전 방지
+   ========================================================== */
+@media (max-width: 768px) {
+    body {
+        padding: 10px 8px !important;
+    }
+
+    .container {
+        padding: 0 2px !important;
+        max-width: 100% !important;
+    }
+
+    /* 1. 헤더 영역 컴팩트 */
+    .header {
+        padding: 14px 12px !important;
+        margin-bottom: 12px !important;
+        border-left-width: 4px !important;
+    }
+
+    .header-title-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .header h1 {
+        font-size: 1.25rem !important;
+        line-height: 1.35 !important;
+        word-break: keep-all !important;
+    }
+
+    .header-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 5px !important;
+        align-items: center !important;
+    }
+
+    .header-actions .btn,
+    .header-btn {
+        padding: 6px 9px !important;
+        font-size: 0.78rem !important;
+        border-radius: 8px !important;
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    .subtitle {
+        font-size: 0.82rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 8px !important;
+        word-break: keep-all !important;
+    }
+
+    .notice-bar {
+        padding: 8px 10px !important;
+        font-size: 0.78rem !important;
+        line-height: 1.4 !important;
+        word-break: keep-all !important;
+    }
+
+    /* 2. 카드 영역 패딩 축소 */
+    .card {
+        padding: 14px 12px !important;
+        margin-bottom: 12px !important;
+        border-radius: 12px !important;
+    }
+
+    .card h2 {
+        font-size: 1.1rem !important;
+        word-break: keep-all !important;
+        line-height: 1.35 !important;
+        margin-bottom: 10px !important;
+    }
+
+    .section-title-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .section-desc {
+        font-size: 0.82rem !important;
+        margin-bottom: 12px !important;
+        word-break: keep-all !important;
+    }
+
+    /* 3. 업로드 영역 */
+    .upload-box {
+        padding: 20px 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .upload-icon {
+        font-size: 1.8rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    #file-select-label {
+        font-size: 0.85rem !important;
+        word-break: keep-all !important;
+        padding: 0 4px !important;
+    }
+
+    .file-info-hint {
+        font-size: 0.75rem !important;
+    }
+
+    /* 4. 메타 그리드 & 진단 패널 */
+    .meta-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+        padding: 8px !important;
+        margin-top: 12px !important;
+    }
+
+    .meta-item {
+        padding: 8px 6px !important;
+    }
+
+    .meta-label {
+        font-size: 0.72rem !important;
+    }
+
+    .meta-val {
+        font-size: 0.84rem !important;
+        word-break: break-all !important;
+    }
+
+    /* 5. 테이블 및 데이터 미리보기 */
+    .table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    table th, table td {
+        padding: 6px 8px !important;
+        font-size: 0.78rem !important;
+        white-space: nowrap !important;
+    }
+
+    /* 6. PIN 잠금 모달 컴팩트화 */
+    .pin-modal-card {
+        padding: 20px 16px !important;
+        max-width: 94vw !important;
+        border-radius: 20px !important;
+    }
+
+    .pin-title {
+        font-size: 1.25rem !important;
+    }
+
+    .pin-subtitle {
+        font-size: 0.8rem !important;
+        word-break: keep-all !important;
+        margin-bottom: 16px !important;
+    }
+
+    .pin-dots-container {
+        gap: 12px !important;
+        margin-bottom: 18px !important;
+    }
+
+    .pin-dot {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    .pin-keypad {
+        gap: 8px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .pin-key {
+        height: 48px !important;
+        font-size: 1.2rem !important;
+        border-radius: 12px !important;
+    }
+
+    .pin-submit-btn {
+        padding: 11px !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 10px !important;
+    }
+
+    .pin-mobile-install-btn {
+        padding: 9px 12px !important;
+        font-size: 0.82rem !important;
+        margin-top: 10px !important;
+        word-break: keep-all !important;
+    }
+
+    /* 7. 플로팅 배너 좁은 화면 최적화 */
+    .mobile-pwa-banner {
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 10px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        gap: 8px !important;
+    }
+
+    .pwa-banner-icon {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .pwa-banner-title {
+        font-size: 0.82rem !important;
+    }
+
+    .pwa-banner-desc {
+        font-size: 0.7rem !important;
+    }
+
+    .pwa-install-act-btn {
+        padding: 6px 10px !important;
+        font-size: 0.78rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-actions {
+        gap: 4px !important;
+    }
+
+    .header-actions .btn {
+        padding: 5px 7px !important;
+        font-size: 0.74rem !important;
+    }
+
+    .meta-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
 }
 
 
