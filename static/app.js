@@ -1445,23 +1445,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showInstallUi() {
-        if (isStandalone) return;
-        if (btnInstallPwa) btnInstallPwa.classList.remove("hidden");
-        if (btnPinInstallPwa) btnPinInstallPwa.classList.remove("hidden");
+        if (isStandalone) {
+            hideInstallUi();
+            return;
+        }
+        if (btnInstallPwa) {
+            btnInstallPwa.classList.remove("hidden");
+            btnInstallPwa.style.display = "inline-flex";
+        }
+        if (btnPinInstallPwa) {
+            btnPinInstallPwa.classList.remove("hidden");
+            btnPinInstallPwa.style.display = "inline-flex";
+        }
         const dismissed = sessionStorage.getItem("pwa_banner_dismissed") === "true";
         if (mobilePwaBanner && !dismissed) {
             mobilePwaBanner.classList.remove("hidden");
+            mobilePwaBanner.style.display = "flex";
         }
     }
 
     function hideInstallUi() {
-        if (btnInstallPwa) btnInstallPwa.classList.add("hidden");
-        if (btnPinInstallPwa) btnPinInstallPwa.classList.add("hidden");
-        if (mobilePwaBanner) mobilePwaBanner.classList.add("hidden");
+        if (btnInstallPwa) {
+            btnInstallPwa.classList.add("hidden");
+            btnInstallPwa.style.display = "none";
+        }
+        if (btnPinInstallPwa) {
+            btnPinInstallPwa.classList.add("hidden");
+            btnPinInstallPwa.style.display = "none";
+        }
+        if (mobilePwaBanner) {
+            mobilePwaBanner.classList.add("hidden");
+            mobilePwaBanner.style.display = "none";
+        }
     }
 
-    // 모바일 접속 시 즉시 다운로드 / 설치 UI 노출
-    if (isMobile && !isStandalone) {
+    // 단독 앱(Standalone)으로 이미 실행 중인 경우 설치 버튼 숨김 처리, 웹 브라우저 접속 시에는 항상 노출
+    if (isStandalone) {
+        hideInstallUi();
+    } else {
         showInstallUi();
     }
 

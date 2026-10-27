@@ -6,7 +6,7 @@
     <title>AI Data Insight Builder</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/style.css?v=20261027_pwa">
+    <link rel="stylesheet" href="/static/style.css?v=20261027_v3">
 
     <!-- PWA & Mobile Web Meta Tags -->
     <link rel="manifest" href="/manifest.json">
@@ -25,7 +25,7 @@
             <div class="header-title-row">
                 <h1>📊 AI Data Insight Builder</h1>
                 <div class="header-actions">
-                    <button id="btn-install-pwa" class="btn btn-sm btn-primary header-btn header-install-btn hidden" title="홈 화면에 PWA 앱 다운로드 및 설치">📲 앱 다운로드</button>
+                    <button id="btn-install-pwa" class="btn btn-sm btn-primary header-btn header-install-btn" title="홈 화면에 PWA 앱 다운로드 및 설치">📲 앱 다운로드</button>
                     <button id="btn-save-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 및 분석 결과를 HTML 파일로 저장">💾 화면 저장</button>
                     <button id="btn-print-screen" class="btn btn-sm btn-outline header-btn" title="현재 화면 인쇄 또는 PDF로 저장">🖨️ 인쇄 / PDF</button>
                     <button id="btn-copy-link" class="btn btn-sm btn-outline header-btn" title="웹페이지 링크 복사">🔗 링크 복사</button>
@@ -348,14 +348,14 @@
 
             <button id="btn-submit-pin" class="btn btn-primary pin-submit-btn">인증 및 잠금 해제</button>
             <p class="pin-hint-text">💡 키보드 숫자키로도 즉시 입력하실 수 있습니다.</p>
-            <button type="button" id="btn-pin-install-pwa" class="pin-mobile-install-btn hidden">
-                <span>📲</span> 모바일 홈 화면에 앱 설치하기
+            <button type="button" id="btn-pin-install-pwa" class="pin-mobile-install-btn">
+                <span>📲</span> 모바일 앱 다운로드 및 설치
             </button>
         </div>
     </div>
 
     <!-- 📲 모바일 전용 플로팅 앱 다운로드 배너 -->
-    <div id="mobile-pwa-banner" class="mobile-pwa-banner hidden">
+    <div id="mobile-pwa-banner" class="mobile-pwa-banner">
         <div class="pwa-banner-content">
             <img src="/static/icons/icon-192.png" alt="App Icon" class="pwa-banner-icon">
             <div class="pwa-banner-text">
@@ -423,6 +423,6 @@
     </div>
 
     <!-- 스크립트 연결 -->
-    <script src="/static/app.js?v=20261027_pwa"></script>
+    <script src="/static/app.js?v=20261027_v3"></script>
 </body>
 </html>
